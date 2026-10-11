@@ -69,6 +69,7 @@ ARCHIVO_CLAVE = EN_VIVO / "clave.txt"
 GALLETA = "cerebro_clave"
 DURACION_GALLETA = 30 * 86400
 VIDA_ENTRADA = 60
+TOPE_CONEXION = 30
 CABECERA_CLAVE = "X-Cerebro-Clave"
 CABECERA_FIRMA = "X-Cerebro-Firma"
 SIN_CLAVE = ("<!doctype html><meta charset=\"utf-8\"><title>Neuromapa</title>"
@@ -121,6 +122,8 @@ aprendizaje_lock = threading.Lock()
 programa_cambiado = threading.Event()
 entradas = {}
 entradas_lock = threading.Lock()
+firmas_usadas = {}
+firmas_usadas_lock = threading.Lock()
 
 
 def clave_de_nota(ruta):
@@ -353,8 +356,9 @@ uso = Uso()
 def decodificar(linea):
     try:
         ev = json.loads(linea.decode("utf-8"), parse_constant=lambda _: None, parse_float=finito)
-        if isinstance(ev, dict) and linea.count(b"[") + linea.count(b"{") > ANIDADO_SOSPECHOSO:
-            json.dumps(ev)
+        if isinstance(ev, dict) and (linea.count(b"[") + linea.count(b"{") > ANIDADO_SOSPECHOSO
+                                     or b"\\ud" in linea.lower()):
+            json.dumps(ev, ensure_ascii=False).encode("utf-8")
     except (ValueError, RecursionError):
         return None
     return ev if isinstance(ev, dict) else None
@@ -869,23 +873,47 @@ def seguir_registro(lector):
 
 
 _clave = []
+_clave_lock = threading.Lock()
+LARGO_CLAVE = 20
+ESPERA_CLAVE_AJENA = 2
+
+
+def leer_clave():
+    try:
+        return ARCHIVO_CLAVE.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+def crear_clave():
+    nueva = secrets.token_urlsafe(24)
+    try:
+        permisos.crear(EN_VIVO)
+        if ARCHIVO_CLAVE.exists():
+            escribir_atomico(ARCHIVO_CLAVE, nueva)
+            return nueva
+        descriptor = os.open(ARCHIVO_CLAVE, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        limite = time.monotonic() + ESPERA_CLAVE_AJENA
+        while time.monotonic() < limite:
+            ajena = leer_clave()
+            if len(ajena) >= LARGO_CLAVE:
+                return ajena
+            time.sleep(0.02)
+        return nueva
+    except OSError:
+        return nueva
+    with os.fdopen(descriptor, "w", encoding="utf-8") as archivo:
+        archivo.write(nueva)
+    return nueva
 
 
 def clave():
-    if not _clave:
-        try:
-            guardada = ARCHIVO_CLAVE.read_text(encoding="utf-8").strip()
-        except OSError:
-            guardada = ""
-        if len(guardada) < 20:
-            guardada = secrets.token_urlsafe(24)
-            try:
-                permisos.crear(EN_VIVO)
-                escribir_atomico(ARCHIVO_CLAVE, guardada)
-            except OSError:
-                pass
-        _clave.append(guardada)
-    return _clave[0]
+    with _clave_lock:
+        if not _clave:
+            guardada = leer_clave()
+            _clave.append(guardada if len(guardada) >= LARGO_CLAVE else crear_clave())
+        return _clave[0]
 
 
 def nombre_galleta(puerto):
@@ -906,6 +934,19 @@ def nueva_entrada(ahora=None):
     return numero
 
 
+def firma_una_vez(camino, firma):
+    if not firma or not firmas.pedido_valido(clave(), camino, firma):
+        return False
+    ahora = time.monotonic()
+    with firmas_usadas_lock:
+        for vieja in [f for f, vence in firmas_usadas.items() if vence <= ahora]:
+            del firmas_usadas[vieja]
+        if (camino, firma) in firmas_usadas:
+            return False
+        firmas_usadas[(camino, firma)] = ahora + 2 * firmas.VIGENCIA + 1
+    return True
+
+
 def usar_entrada(numero):
     with entradas_lock:
         vence = entradas.pop(numero, None)
@@ -913,6 +954,7 @@ def usar_entrada(numero):
 
 
 class Manejador(http.server.SimpleHTTPRequestHandler):
+    timeout = TOPE_CONEXION
     error_message_format = ('<!doctype html><meta charset="utf-8"><title>Neuromapa</title>'
                             '<p style="font:16px system-ui;margin:40px">%(explain)s</p>')
     error_content_type = "text/html; charset=utf-8"
@@ -972,8 +1014,7 @@ class Manejador(http.server.SimpleHTTPRequestHandler):
         return "/cerebro.html" + ("?" + "&".join(opciones) if opciones else "")
 
     def dar_entrada(self):
-        firma = self.headers.get(CABECERA_FIRMA)
-        if not firma or not firmas.pedido_valido(clave(), self.path, firma):
+        if not firma_una_vez(self.path, self.headers.get(CABECERA_FIRMA)):
             self.sin_clave()
             return
         self.enviar_json(json.dumps({"entrada": nueva_entrada()}).encode("utf-8"))
@@ -1095,8 +1136,7 @@ class Manejador(http.server.SimpleHTTPRequestHandler):
         self.enviar_json(json.dumps({"firma": firmas.del_servidor(clave(), desafio)}).encode("utf-8"))
 
     def apagar(self):
-        firma = self.headers.get(CABECERA_FIRMA)
-        if not firma or not firmas.pedido_valido(clave(), self.path, firma):
+        if not firma_una_vez(self.path, self.headers.get(CABECERA_FIRMA)):
             self.sin_clave()
             return
         self.enviar_json(b'{"apagando": true}')
@@ -1186,7 +1226,7 @@ class Manejador(http.server.SimpleHTTPRequestHandler):
                 hay, aprendido = aprendizaje["firma"] is not None, aprendizaje["datos"]
             if hay:
                 previos += f"event: aprendido\ndata: {json.dumps(aprendido, ensure_ascii=False)}\n\n"
-            self.wfile.write(previos.encode("utf-8"))
+            self.wfile.write(previos.encode("utf-8", "replace"))
             self.wfile.flush()
             while True:
                 try:
@@ -1482,6 +1522,7 @@ def arrancar(anterior, candados, ruta_candado, puertos, abrir, solo):
         cual = f"el puerto {puertos[0]}" if len(puertos) == 1 else f"ningún puerto entre el {puertos[0]} y el {puertos[-1]}"
         print(f"No pude abrir {cual}. El sistema dijo: {falla.strerror or falla}")
         return 1
+    clave()
     lector = Lector()
     lector.cargar_historial()
     threading.Thread(target=ordenar_en_fondo, args=(lector.leidos,), daemon=True).start()

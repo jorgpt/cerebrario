@@ -8,10 +8,13 @@ sys.path.insert(0, CARPETA)
 import hooks_comun
 
 HERRAMIENTAS = ("Agent", "Task", "Workflow")
+SIN_PANTALLA = ("bypassPermissions", "dontAsk")
 
 
 def aviso(datos, ahora=None):
     if datos.get("hook_event_name") != "PreToolUse" or datos.get("tool_name") not in HERRAMIENTAS:
+        return None
+    if datos.get("permission_mode") in SIN_PANTALLA:
         return None
     import configuracion
     freno = configuracion.actual().get("freno")
@@ -36,12 +39,13 @@ def aviso(datos, ahora=None):
                 continue
         except OSError:
             continue
-        usado += gasto.total(gasto.uso_de(archivo, desde))
+        usado += gasto.ponderado(gasto.uso_de(archivo, desde))
     tope = freno["tokens_de_agentes_por_hora"]
     if usado < tope:
         return None
     que = "el workflow" if datos.get("tool_name") == "Workflow" else "otro agente"
-    return ("Neuromapa: los agentes de este chat ya usaron " + gasto.cifra(usado) + " tokens en la última hora y tu tope "
+    return ("Neuromapa: los agentes de este chat ya usaron el equivalente a " + gasto.cifra(usado) + " tokens (lo leído de "
+            "la caché cuenta un décimo) en la última hora y tu tope "
             "es " + gasto.cifra(tope) + ". ¿Lanzar igual " + que + "?")
 
 

@@ -20,7 +20,11 @@ def crear(carpeta):
     while os.path.dirname(nuevas[-1]) != nuevas[-1] and not os.path.isdir(os.path.dirname(nuevas[-1])):
         nuevas.append(os.path.dirname(nuevas[-1]))
     os.makedirs(carpeta, exist_ok=True)
-    for nueva in reversed(nuevas if os.name != "nt" else nuevas[-1:]):
+    import donde
+    datos = os.path.normcase(os.path.dirname(os.path.abspath(donde.config()[0])))
+    propias = [n for n in nuevas if os.path.normcase(n) == datos or os.path.normcase(n).startswith(datos + os.sep)]
+    propias = propias or [carpeta]
+    for nueva in reversed(propias if os.name != "nt" else propias[-1:]):
         cerrar(nueva)
 
 

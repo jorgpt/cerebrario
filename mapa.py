@@ -24,6 +24,7 @@ FUNCION_GRANDE = 200
 GRUPOS_MAXIMOS = 40
 LINEAS_POR_GRUPO = 8
 ANCHO_RANGO = 13
+CAMPOS_DE_SENTENCIAS = ("body", "orelse", "finalbody", "handlers", "cases")
 
 FICHA = re.compile("|".join([
     r"(?P<espacio>\s+)",
@@ -373,12 +374,12 @@ def mapa_html(texto, lineas):
 def mapa_py(texto):
     try:
         arbol = ast.parse(texto)
-    except SyntaxError:
+    except (SyntaxError, ValueError, RecursionError, MemoryError):
         return mapa_py_por_sangria(texto)
     bloques = []
 
     def recorrer(nodo, padre):
-        for hijo in ast.iter_child_nodes(nodo):
+        for hijo in (h for campo in CAMPOS_DE_SENTENCIAS for h in getattr(nodo, campo, None) or []):
             if isinstance(hijo, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 inicio = min([hijo.lineno] + [d.lineno for d in hijo.decorator_list])
                 if isinstance(hijo, ast.ClassDef):
@@ -391,7 +392,10 @@ def mapa_py(texto):
             else:
                 recorrer(hijo, padre)
 
-    recorrer(arbol, None)
+    try:
+        recorrer(arbol, None)
+    except RecursionError:
+        return mapa_py_por_sangria(texto)
     return bloques
 
 

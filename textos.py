@@ -2,6 +2,9 @@ import re
 import unicodedata
 
 RE_CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
+RE_INVISIBLES = re.compile(r"[\u00ad\u061c\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u206f\ufeff\ufff9-\ufffb]")
+RE_CORTES = re.compile(r"[\x00-\x1f\x7f-\x9f\u2028\u2029]")
+ETIQUETAS = str.maketrans({"<": "‹", ">": "›"})
 
 
 def sin_control(texto):
@@ -32,8 +35,12 @@ def detalle(error):
     return f"detalle de Python, en inglés: {sin_control(texto)}"
 
 
+def limpiar(texto):
+    return RE_CORTES.sub(" ", RE_INVISIBLES.sub("", str(texto))).translate(ETIQUETAS)
+
+
 def citar(texto, largo=None):
-    limpio = " ".join(str(texto).split()).replace("«", "‹").replace("»", "›")
+    limpio = " ".join(limpiar(texto).split()).replace("«", "‹").replace("»", "›")
     if largo and len(limpio) > largo:
         limpio = limpio[:largo - 1].rstrip() + "…"
     return "«" + limpio + "»"

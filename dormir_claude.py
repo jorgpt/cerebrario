@@ -434,7 +434,8 @@ def podar(registro, ahora, vigentes=()):
             and ahora - v["t"] < OLVIDO and (k in vigentes or ahora - v["t"] < OLVIDO_SIN_USO)}
 
 
-def revisar(cerebro, propuestas, memo, opciones, ahora, llamar_a=None, repos=None, git=None, hasta=None):
+def revisar(cerebro, propuestas, memo, opciones, ahora, llamar_a=None, repos=None, git=None, hasta=None,
+            al_gastar=None):
     import medico
     git = git or medico.correr_git
     repos = medico.repos_conocidos() if repos is None else list(repos)
@@ -463,6 +464,8 @@ def revisar(cerebro, propuestas, memo, opciones, ahora, llamar_a=None, repos=Non
         resultado = llamar_a(pedido, esquema, min(queda(), TOPE_POR_LLAMADA), **opciones_llamada)
         estado["gastado"] += max(0.0, float(resultado.get("gasto") or 0.0))
         estado["preguntas"] += 1
+        if al_gastar is not None:
+            al_gastar(round(gastos.get(hoy(ahora), 0.0) + estado["gastado"], 4))
         if resultado.get("tope"):
             return None
         if "error" in resultado:

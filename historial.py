@@ -6,15 +6,17 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 import zipfile
 from pathlib import Path
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import cerebro as nucleo
 import configuracion
 import permisos
-from archivos import es_sensible, escribir_atomico, leer_objeto_json
+from archivos import es_sensible, escribir_atomico, hay_candados, leer_objeto_json, soltar_candado, tomar_candado
 from textos import cantidad
 
 CARPETA = Path(nucleo.DATOS) / "historial"
@@ -22,12 +24,17 @@ ESTADO = CARPETA / "estado.json"
 EXCLUIR = "*\n!*.md\n!*/\n"
 ESPERA = 4.0
 PRESUPUESTO = 6.0
+ESPERA_FONDO = 300.0
+PRESUPUESTO_FONDO = 1800.0
+CANDADO_FONDO = "guardar.lock"
+MOSTRAR_RETENIDAS = 5
 CANDADO_VIEJO = 600
 MINIMO_BUSCADO = 3
 TOPE_VERSIONES_BUSCADAS = 100
 TOPE_CAMBIOS = 15
 TOPE_HALLAZGOS = 20
 _limite = [None]
+_espera = [None]
 TOPE_RENGLONES = 3
 LARGO_RENGLON = 200
 NOMBRES_CAMBIO = {"M": ("cambiada", "cambiadas"), "A": ("nueva", "nuevas"), "D": ("borrada", "borradas")}
@@ -63,7 +70,8 @@ def git(carpeta, *argumentos, binario=False, entrada=None):
              "-c", "core.quotepath=false", "-c", "user.name=Neuromapa", "-c", "user.email=neuromapa@localhost",
              "-c", "commit.gpgsign=false", "-c", f"core.hooksPath={repo_de(carpeta) / 'sin-hooks'}", *argumentos]
     entorno = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
-    espera = ESPERA if _limite[0] is None else min(ESPERA, _limite[0] - time.monotonic())
+    tope = _espera[0] or ESPERA
+    espera = tope if _limite[0] is None else min(tope, _limite[0] - time.monotonic())
     if espera <= 0:
         return None
     try:
@@ -119,7 +127,25 @@ def resumen(cambios):
     return "; ".join(partes) or "sin cambios"
 
 
-def guardar_carpeta(carpeta):
+def con_clave(carpeta, relativa):
+    import charlas
+    contenido = git(carpeta, "show", f":{relativa}", binario=True)
+    texto = contenido.decode("utf-8", "replace") if contenido is not None else ""
+    return any(patron.search(texto) for patron in charlas.CLAVES)
+
+
+def retener(carpeta, cambios):
+    con_claves = [ruta for estado, ruta in cambios if estado != "D" and con_clave(carpeta, ruta)]
+    nuevas = [ruta for estado, ruta in cambios if estado == "A" and ruta in con_claves]
+    viejas = [ruta for ruta in con_claves if ruta not in nuevas]
+    if nuevas and git(carpeta, "rm", "--cached", "-q", "--", *nuevas) is None:
+        return None
+    if viejas and git(carpeta, "reset", "-q", "--", *viejas) is None:
+        return None
+    return con_claves
+
+
+def guardar_carpeta(carpeta, retenidas=None):
     repo = repo_de(carpeta)
     nuevo = not (repo / "HEAD").is_file()
     if nuevo:
@@ -138,32 +164,77 @@ def guardar_carpeta(carpeta):
     if salida is None:
         return False
     cambios = [tuple(linea.split("\t", 1)) for linea in salida.splitlines() if "\t" in linea]
+    con_claves = retener(carpeta, cambios)
+    if con_claves is None:
+        return False
+    if retenidas is not None:
+        retenidas.extend(con_claves)
+    cambios = [(estado, ruta) for estado, ruta in cambios if ruta not in con_claves]
     if not cambios:
         return True
     mensaje = (f"primera versión: {cantidad(len(cambios), 'nota', 'notas')}" if nuevo else resumen(cambios))
     return git(carpeta, "commit", "-q", "-m", mensaje) is not None
 
 
-def guardar():
+def guardar(presupuesto=None, espera=None):
     if not hay_git():
         return False
     estado = leer_objeto_json(ESTADO)
     cambio = False
-    _limite[0] = time.monotonic() + PRESUPUESTO
+    _limite[0] = time.monotonic() + (PRESUPUESTO if presupuesto is None else presupuesto)
+    _espera[0] = espera
     try:
         for carpeta in carpetas():
             clave = repo_de(carpeta).name
             actual = firma(carpeta)
             if estado.get(clave) == actual:
                 continue
-            if guardar_carpeta(carpeta):
+            retenidas = []
+            if guardar_carpeta(carpeta, retenidas):
                 estado[clave] = actual
+                estado["retenidas"] = con_retenidas(estado.get("retenidas"), clave,
+                                                    [os.path.join(carpeta, r) for r in retenidas])
                 cambio = True
     finally:
         _limite[0] = None
+        _espera[0] = None
     if cambio:
         escribir_atomico(ESTADO, json.dumps(estado, ensure_ascii=False, indent=1) + "\n")
     return cambio
+
+
+def con_retenidas(previas, clave, rutas):
+    otras = {k: v for k, v in (previas if isinstance(previas, dict) else {}).items() if k != clave and isinstance(v, list)}
+    return dict(otras, **({clave: rutas} if rutas else {}))
+
+
+def aviso_retenidas():
+    previas = leer_objeto_json(ESTADO).get("retenidas")
+    rutas = [r for lista in (previas if isinstance(previas, dict) else {}).values() if isinstance(lista, list)
+             for r in lista]
+    if not rutas:
+        return ""
+    nombres = ", ".join(os.path.basename(str(r)) for r in rutas[:MOSTRAR_RETENIDAS])
+    resto = f" y {len(rutas) - MOSTRAR_RETENIDAS} más" if len(rutas) > MOSTRAR_RETENIDAS else ""
+    return (f" AVISO: no guardé la última versión de {cantidad(len(rutas), 'nota', 'notas')} ({nombres}{resto}) porque "
+            "parecen tener una clave o un secreto. Sacalo de la nota (va en un gestor de claves o en una variable de "
+            "entorno) y se guarda sola la próxima vez.")
+
+
+def main_guardar():
+    try:
+        permisos.crear(CARPETA)
+        candado = tomar_candado(str(CARPETA / CANDADO_FONDO))
+        if candado is None and hay_candados():
+            return 0
+        try:
+            guardar(PRESUPUESTO_FONDO, ESPERA_FONDO)
+        finally:
+            soltar_candado(candado)
+    except Exception:
+        import hooks_comun
+        hooks_comun.fallo()
+    return 0
 
 
 def fecha(segundos):
@@ -188,10 +259,11 @@ def linea_salud():
     guardar()
     tiempos = [t for carpeta in lista for t in versiones(carpeta)]
     if not tiempos:
-        return "Historial de la memoria: todavía sin versiones (se guarda al terminar cada respuesta de Claude)."
+        return ("Historial de la memoria: todavía sin versiones (se guarda al terminar cada respuesta de Claude)."
+                + aviso_retenidas())
     return (f"Historial de la memoria: {cantidad(len(tiempos), 'versión', 'versiones')} desde el {fecha(min(tiempos))}, "
             f"la última el {fecha(max(tiempos))}. Para buscar algo que se borró: {configuracion.comando()} "
-            f'--historial "texto".')
+            f'--historial "texto".' + aviso_retenidas())
 
 
 def registro(carpeta, *argumentos):
@@ -445,3 +517,7 @@ def main_al(consulta, cuando, sobre=True, todo=False, maximo=8):
 
 def main(argumento):
     return main_buscar(argumento) if argumento else main_cambios()
+
+
+if __name__ == "__main__" and sys.argv[1:] == ["--guardar"]:
+    sys.exit(main_guardar())

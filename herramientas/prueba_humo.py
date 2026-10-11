@@ -5106,8 +5106,8 @@ def revisar_partir_siempre(t):
             break
         time.sleep(0.1)
     lanzado = (mundo / "lanzado.txt").read_text(encoding="utf-8") if (mundo / "lanzado.txt").exists() else ""
-    probar("pasada media hora, el primer pedido larga de fondo solo la partición (no toda la pasada del día); antes, nada",
-           not antes_de_tiempo and lanzo and lanzado == "--partir-llenas", (antes_de_tiempo, lanzo, lanzado))
+    probar("un pedido nunca larga la partición de fondo, ni pasada media hora: eso queda para el comando a mano",
+           not antes_de_tiempo and not lanzo and lanzado == "", (antes_de_tiempo, lanzo, lanzado))
     os.utime(sin_fechas, (viejo, viejo))
     todos = renglones()
     codigo, salida = cerebro_en(mundo, "--partir-llenas")
@@ -5657,6 +5657,10 @@ def revisar_historial(t):
         respuesta = correr_hook("hook_guardar.py", json.dumps({"hook_event_name": "Stop", "session_id": "hi000001-x",
                                                                "cwd": str(t / "proyecto")}).encode("utf-8"),
                                 CEREBRO_CONFIG=str(t / "config.json"), CLAUDE_PLUGIN_DATA="")
+        for _ in range(300):
+            if len(historial.versiones(carpeta)) > cuantas:
+                break
+            time.sleep(0.1)
         del_hook = len(historial.versiones(carpeta)) - cuantas
         codigo, lista = salida_de(historial.main, "")
         probar("el hook de terminar cada respuesta guarda solo (acá, la nota borrada) y --historial muestra los cambios",
@@ -6368,7 +6372,7 @@ def revisar_dos_consolas(t, sh, base, comandos):
     datos = t / "datos-cmd"
     for _ in range(2):
         r = en_powershell(comando, pedido.encode("utf-8"), dict(base, CLAUDE_PLUGIN_DATA=str(datos)))
-    python_txt = datos / "python.txt"
+    python_txt = datos / "python-cmd.txt"
     recordado = python_txt.read_text(encoding="utf-8", errors="replace").strip() if python_txt.is_file() else ""
     probar("el lanzador de Windows recuerda qué Python usar", recordado in ("py", "python") and salidas(r) == esperado,
            (recordado, salidas(r)))
@@ -6376,12 +6380,12 @@ def revisar_dos_consolas(t, sh, base, comandos):
     if os.path.isfile(os.path.join(sistema, "py.exe")):
         perdido = t / "datos-cmd-perdido"
         perdido.mkdir()
-        (perdido / "python.txt").write_text("python\n", encoding="utf-8")
+        (perdido / "python-cmd.txt").write_text("python\n", encoding="utf-8")
         solo_py = dict(base, CLAUDE_PLUGIN_DATA=str(perdido),
                        PATH=os.pathsep.join([sistema, os.path.join(sistema, "System32"),
                                              os.path.join(sistema, "System32", "WindowsPowerShell", "v1.0")]))
         r = en_powershell(comando, pedido.encode("utf-8"), solo_py)
-        ahora = (perdido / "python.txt").read_text(encoding="utf-8", errors="replace").strip()
+        ahora = (perdido / "python-cmd.txt").read_text(encoding="utf-8", errors="replace").strip()
         probar("si el Python que recordaba el lanzador de Windows ya no está, busca otro en vez de fallar en cada hook",
                salidas(r) == esperado and r.returncode == 0 and ahora == "py", (salidas(r), r.returncode, ahora))
     else:
@@ -6543,7 +6547,7 @@ def revisar_plugin(t):
                and "más viejo".encode("utf-8") not in tienda.stderr, (tienda.returncode, tienda.stderr[-200:]))
         recuerdos = t / "datos-lanzador"
         recuerdos.mkdir()
-        python_txt = recuerdos / "python.txt"
+        python_txt = recuerdos / "python-sh.txt"
         con_datos = dict(base, CLAUDE_PLUGIN_DATA=str(recuerdos))
         vueltas = []
         for anterior in ("/no/existe/python3", "python3"):

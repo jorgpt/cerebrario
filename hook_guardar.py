@@ -90,8 +90,8 @@ def aviso_fin(datos, ahora=None):
 
 def guardar_historial():
     try:
-        import historial
-        historial.guardar()
+        import problemas
+        problemas.lanzar_de_fondo([sys.executable, "-I", "-S", os.path.join(CARPETA, "historial.py"), "--guardar"])
     except Exception:
         hooks_comun.fallo()
 

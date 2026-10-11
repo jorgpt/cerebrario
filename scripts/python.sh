@@ -9,7 +9,7 @@ elif [ "${1:-}" = "--consola" ]; then
     shift
 fi
 export PYTHONIOENCODING="${PYTHONIOENCODING:-utf-8}"
-guardado="${CLAUDE_PLUGIN_DATA:-}/python.txt"
+guardado="${CLAUDE_PLUGIN_DATA:-}/python-sh.txt"
 correr() {
     ruta="$1"
     shift

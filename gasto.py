@@ -15,6 +15,8 @@ ABANDONADO = 2 * HORA
 CAMPOS = ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens", "output_tokens")
 MARCA_USO = b'"usage"'
 JOURNAL = "journal.jsonl"
+PESOS = {"input_tokens": 1.0, "cache_creation_input_tokens": 1.25, "cache_read_input_tokens": 0.1,
+         "output_tokens": 1.0}
 
 
 def epoca(texto):
@@ -30,6 +32,10 @@ def vacio():
 
 def total(uso):
     return sum(uso.values())
+
+
+def ponderado(uso):
+    return round(sum(PESOS.get(c, 1.0) * v for c, v in uso.items()))
 
 
 def uso_de(archivo, desde):

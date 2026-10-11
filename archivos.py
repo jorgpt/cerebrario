@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import stat
 import tempfile
 import time
 from pathlib import Path
@@ -69,9 +70,22 @@ def menciona_sensible(texto):
 
 def escribir_atomico(ruta, contenido):
     ruta = Path(ruta)
+    if ruta.is_symlink():
+        ruta = Path(os.path.realpath(ruta))
+    try:
+        antes = os.stat(ruta)
+    except OSError:
+        antes = None
     binario = isinstance(contenido, bytes)
+    if antes is not None and antes.st_nlink > 1:
+        with open(ruta, "r+b") as archivo:
+            archivo.write(contenido if binario else contenido.encode("utf-8"))
+            archivo.truncate()
+        return
     fd, temporal = tempfile.mkstemp(dir=ruta.parent, prefix=f".{ruta.name}.", suffix=".tmp")
     try:
+        if antes is not None and os.name == "posix":
+            os.chmod(temporal, stat.S_IMODE(antes.st_mode))
         with os.fdopen(fd, "wb") if binario else os.fdopen(fd, "w", encoding="utf-8", newline="") as archivo:
             archivo.write(contenido)
         limite = time.monotonic() + ESPERA_REEMPLAZO

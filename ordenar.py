@@ -31,7 +31,12 @@ RE_ENLACE = re.compile(r"\[[^\]\n]*\]\(\s*<?(?:\./)?([^)>#\s]+\.md)[)#>\s]", re.
 RE_MARCA_ARCHIVO = re.compile(r"\((?:archivo|archive|archived)\)", re.I)
 RE_VIGENTE = re.compile(r"\s*\((?:vigente|actual|current)\)\s*$", re.I)
 RE_SELLO = re.compile(r"^\s*(?:modified|created|updated|originSessionId)\s*:", re.I)
-RE_NOMBRE_MALO = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+RE_NOMBRE_MALO = re.compile(r'[<>:"/\\|?*#\[\]^\x00-\x1f]')
+LARGO_NOMBRE = 120
+RESERVADOS = {"con", "prn", "aux", "nul", *(f"com{i}" for i in range(1, 10)), *(f"lpt{i}" for i in range(1, 10))}
+NOMBRES_PROHIBIDOS = ("memory", "claude")
+RE_SELLO_RESPALDO = re.compile(r"^(\d{8}-\d{6})-(?:partir|renombrar|regla|skill)(?:-\d+)?$")
+CARACTERES_PROHIBIDOS ='< > : " / \\ | ? * # [ ] ^'
 RE_NAME = re.compile(r"^name[ \t]*:[ \t]*(.*?)[ \t]*\r?$", re.M)
 RE_CADENA_JSON = re.compile(r'"(?:[^"\\\n]|\\.)*"')
 DATOS_CON_RUTAS = (("hechos.json", ("nota",)), ("descartados.json", ("ruta",)), ("sugerencias.json", ("de", "a")))
@@ -239,6 +244,11 @@ def huella_de(*partes):
     return suma.hexdigest()[:8]
 
 
+def nombre_malo(nombre):
+    return (not nombre or nombre.startswith(".") or nombre.endswith((" ", ".")) or len(nombre) > LARGO_NOMBRE
+            or bool(RE_NOMBRE_MALO.search(nombre)) or nombre.split(".")[0].strip().lower() in RESERVADOS)
+
+
 def cambio_de_indice(texto, fuente, destino, titulo, gancho, numero, tomo=False):
     renglones = renglones_de(texto)
     fin = fin_de_renglon(texto)
@@ -312,8 +322,14 @@ def planear(ruta, mover, destino="", titulo="", descripcion="", memoria=False, i
     fin = fin_de_renglon(texto)
     base = (RE_TOMO if tomo else RE_PARTE).sub("", ruta.stem)
     if destino:
-        nombre = destino if destino.lower().endswith(".md") else f"{destino}.md"
-        ruta_destino = Path(os.path.normpath(os.path.join(str(ruta.parent), nombre)))
+        tallo = destino.strip()
+        tallo = tallo[:-3] if tallo.lower().endswith(".md") else tallo
+        if nombre_malo(tallo):
+            return None, (f"--destino va sin carpeta: el nombre de otra nota de la misma memoria, sin "
+                          f"{CARACTERES_PROHIBIDOS} y de hasta {LARGO_NOMBRE} letras.")
+        if tallo.lower() in NOMBRES_PROHIBIDOS:
+            return None, "el destino no puede ser el índice ni un CLAUDE.md."
+        ruta_destino = ruta.parent / f"{tallo}.md"
     else:
         palabra = "parte" if tomo else "historia"
         ruta_destino = ruta.parent / f"{base}-{palabra}-{siguiente_parte(ruta.parent, base, tomo)}.md"
@@ -487,7 +503,20 @@ def respaldar(datos, rutas, ahora=None, que="partir"):
     permisos.crear(carpeta)
     for i, ruta in enumerate(rutas):
         shutil.copy2(str(ruta), str(carpeta / f"{i + 1}-{Path(ruta).name}"))
+    podar_respaldos(carpeta.parent, carpeta, ahora)
     return carpeta
+
+
+def podar_respaldos(base, nueva, ahora=None):
+    import cerebro as nucleo
+    dias = nucleo.CONFIG.get("borrar_registros_dias")
+    if not dias:
+        return
+    limite = time.strftime("%Y%m%d-%H%M%S", time.localtime((time.time() if ahora is None else ahora) - dias * 86400))
+    for vieja in base.iterdir():
+        sello = RE_SELLO_RESPALDO.match(vieja.name)
+        if vieja != nueva and sello and sello.group(1) < limite and vieja.is_dir() and not vieja.is_symlink():
+            shutil.rmtree(vieja, ignore_errors=True)
 
 
 def aplicar(plan, datos, ahora=None):
@@ -509,13 +538,23 @@ def aplicar(plan, datos, ahora=None):
             escribir_atomico(plan["indice"], bytes_indice)
             escritos.append((plan["indice"], crudo_indice))
     except Exception as error:
-        for ruta, antes in reversed(escritos):
+        return None, dicho_indice, f"{error}{deshacer(escritos, carpeta)}"
+    return carpeta, dicho_indice, None
+
+
+def deshacer(escritos, carpeta):
+    quedaron = []
+    for ruta, antes in reversed(escritos):
+        try:
             if antes is None:
                 os.remove(str(ruta))
             else:
                 escribir_atomico(ruta, antes)
-        return None, dicho_indice, f"{error}: dejé todo como estaba."
-    return carpeta, dicho_indice, None
+        except OSError:
+            quedaron.append(Path(ruta).name)
+    if not quedaron:
+        return ": dejé todo como estaba."
+    return f"; no pude deshacer {', '.join(quedaron)}: la copia de cómo estaba todo antes está en {carpeta}."
 
 
 def lista_de(ruta):
@@ -607,6 +646,18 @@ def citas_por_renglon(contexto):
     return salida
 
 
+def indice_lleno(bytes_indice):
+    import medico
+    if not bytes_indice:
+        return ""
+    renglones = len(renglones_de(bytes_indice.decode("utf-8", errors="replace")))
+    if renglones <= medico.LINEAS_INDICE and len(bytes_indice) <= medico.BYTES_INDICE:
+        return ""
+    return (f"el índice queda en {cantidad(renglones, 'renglón', 'renglones')} y {kb(len(bytes_indice))}, más que lo que "
+            f"Claude lee al arrancar ({medico.LINEAS_INDICE} renglones o {medico.BYTES_INDICE // 1000} KB): lo que pase "
+            "del tope, quizá la entrada nueva, no se ve al arrancar. Conviene juntar o acortar renglones del índice.")
+
+
 def main_partir(nota, mover="", destino="", titulo="", descripcion="", confirmar="", gancho=""):
     import cerebro as nucleo
     import configuracion
@@ -631,7 +682,10 @@ def main_partir(nota, mover="", destino="", titulo="", descripcion="", confirmar
     if error:
         print(f"Error: {error}")
         return 2
-    _, _, dicho_indice = indice_para(plan)
+    _, bytes_indice, dicho_indice = indice_para(plan)
+    aviso_indice = indice_lleno(bytes_indice)
+    if aviso_indice:
+        plan["avisos"].append(aviso_indice)
     tokens, entra, _ = medidas(plan["renglones_despues"], len(plan["bytes_fuente"]))
     tokens_destino, entra_destino, _ = medidas(plan["bytes_destino"].count(b"\n"), len(plan["bytes_destino"]))
     donde = (f'al final de {plan["destino"].name}, que ya existe' if plan["existe"]
@@ -854,8 +908,10 @@ def planear_nombre(contexto, nuevo, datos):
     nuevo = nuevo.strip()
     nuevo = nuevo[:-3] if nuevo.lower().endswith(".md") else nuevo
     ruta = Path(objetivo["ruta"])
-    if not nuevo or nuevo.startswith(".") or nuevo.endswith((" ", ".")) or RE_NOMBRE_MALO.search(nuevo):
-        return None, "el nombre nuevo va sin carpeta y sin < > : \" / \\ | ? *, y no puede empezar con punto."
+    if nombre_malo(nuevo):
+        return None, (f"el nombre nuevo va sin carpeta y sin {CARACTERES_PROHIBIDOS}, no puede empezar con punto, tiene "
+                      f"hasta {LARGO_NOMBRE} letras y no puede ser un nombre reservado de Windows (CON, PRN, AUX, NUL, "
+                      "COM1, LPT1…).")
     nueva = ruta.with_name(f"{nuevo}.md")
     if os.path.normcase(str(nueva)) == os.path.normcase(str(ruta)):
         return None, "la nota ya se llama así."
@@ -867,6 +923,7 @@ def planear_nombre(contexto, nuevo, datos):
         return None, f"ya hay una nota que se llama {nuevo}: elegí otro nombre."
     cambios = []
     afuera = []
+    sin_utf8 = []
     dudosas = []
     ejemplos = []
     for nodo in cerebro.nodos:
@@ -876,6 +933,10 @@ def planear_nombre(contexto, nuevo, datos):
         except (OSError, UnicodeDecodeError) as error:
             if propio:
                 return None, f"no pude leer {ruta.name} ({error}): no la toco."
+            texto = nucleo.leer_texto(Path(nodo["ruta"]))[0] if isinstance(error, UnicodeDecodeError) else None
+            if texto:
+                sin_utf8 += [(nodo["ruta"], renglon_de(texto, a), clase, muestra(texto, a, b))
+                             for a, b, _, clase in referencias_en(cerebro, nodo, texto, objetivo, nuevo)[0]]
             continue
         hallados, dudosos = referencias_en(cerebro, nodo, texto, objetivo, nuevo)
         dudosas += [(nodo["ruta"], renglon_de(texto, i)) for i in dudosos]
@@ -894,7 +955,7 @@ def planear_nombre(contexto, nuevo, datos):
     for c in cambios + de_datos:
         partes += [os.path.normcase(str(c["ruta"])), c["antes"]]
     return {"ruta": ruta, "nueva": nueva, "nuevo": nuevo, "cambios": cambios, "datos": de_datos, "afuera": afuera,
-            "dudosas": dudosas, "ejemplos": ejemplos[:TOPE_EJEMPLOS], "huella": huella_de(*partes)}, None
+            "sin_utf8": sin_utf8, "dudosas": dudosas, "ejemplos": ejemplos[:TOPE_EJEMPLOS], "huella": huella_de(*partes)}, None
 
 
 def aplicar_nombre(plan, datos, ahora=None):
@@ -917,11 +978,7 @@ def aplicar_nombre(plan, datos, ahora=None):
         creada = True
         os.remove(str(plan["ruta"]))
     except Exception as error:
-        if creada:
-            os.remove(str(plan["nueva"]))
-        for ruta, antes in reversed(escritos):
-            escribir_atomico(ruta, antes)
-        return None, f"{error}: dejé todo como estaba."
+        return None, f"{error}{deshacer(escritos + ([(plan['nueva'], None)] if creada else []), carpeta)}"
     return carpeta, None
 
 
@@ -963,8 +1020,13 @@ def main_renombrar(nota, nuevo, confirmar=""):
                    for ruta, linea, clase, texto in plan["afuera"][:TOPE_AFUERA]]
         if len(plan["afuera"]) > TOPE_AFUERA:
             lineas.append(f'    … y {len(plan["afuera"]) - TOPE_AFUERA} más.')
+    if plan["sin_utf8"]:
+        lineas.append(f'  No toco {cantidad(len(plan["sin_utf8"]), "referencia", "referencias")} en notas que no están '
+                      "en UTF-8 (quedarían rotas: cambialas a mano o pasá esas notas a UTF-8 antes):")
+        lineas += [f"    {ruta}:{linea} ({CLASES[clase][0]}) «{texto}»"
+                   for ruta, linea, clase, texto in plan["sin_utf8"][:TOPE_AFUERA]]
     if plan["dudosas"]:
-        lugares = ", ".join(f"{Path(ruta).name}:{linea}" for ruta, linea in plan["dudosas"][:TOPE_AFUERA])
+        lugares =", ".join(f"{Path(ruta).name}:{linea}" for ruta, linea in plan["dudosas"][:TOPE_AFUERA])
         lineas.append(f'  No toco {cantidad(len(plan["dudosas"]), "mención dudosa", "menciones dudosas")} (hay otra nota '
                       f"con ese nombre de archivo y no se sabe a cuál apunta): {lugares}.")
     comando = f'{configuracion.comando()} --renombrar "{plan["ruta"]}" {plan["nuevo"]}'

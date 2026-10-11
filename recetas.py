@@ -101,7 +101,11 @@ def juntar(cerebro, aprendido=None):
 def nombre_de(receta):
     plano = unicodedata.normalize("NFKD", f'{Path(receta["ruta"]).stem} {receta["titulo"]}')
     plano = "".join(c for c in plano if not unicodedata.combining(c)).lower()
-    return re.sub(r"-{2,}", "-", re.sub(r"[^a-z0-9]+", "-", plano)).strip("-")[:LARGO_NOMBRE].strip("-")
+    nombre = re.sub(r"-{2,}", "-", re.sub(r"[^a-z0-9]+", "-", plano)).strip("-")[:LARGO_NOMBRE].strip("-")
+    if nombre:
+        return nombre
+    import ordenar
+    return f'receta-{ordenar.huella_de(Path(receta["ruta"]).name, receta["titulo"])}'
 
 
 def entre_comillas(texto):

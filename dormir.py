@@ -9,7 +9,7 @@ import time
 import permisos
 import problemas
 from archivos import dentro, escribir_atomico, hay_candados, leer_objeto_json, soltar_candado, tomar_candado
-from textos import cantidad, citar, decimal, detalle, miles
+from textos import cantidad, citar, decimal, detalle, limpiar, miles
 
 ARCHIVO = os.path.join("en-vivo", "dormir.json")
 MARCA = os.path.join("en-vivo", "durmiendo.txt")
@@ -80,14 +80,13 @@ def falta_partir(carpeta, ahora):
 
 def despertar(carpeta, programa, ahora=None):
     ahora = time.time() if ahora is None else ahora
-    opcion = "--dormir" if hace_falta(carpeta, ahora) else "--partir-llenas" if falta_partir(carpeta, ahora) else ""
-    if not opcion:
+    if not hace_falta(carpeta, ahora):
         return False
     marca = ruta(carpeta, MARCA)
     permisos.crear(os.path.dirname(marca))
     with open(marca, "w", encoding="utf-8", newline="\n") as f:
         f.write(f"{int(ahora)}\n")
-    problemas.lanzar_de_fondo([sys.executable, programa, opcion])
+    problemas.lanzar_de_fondo([sys.executable, "-I", "-S", programa, "--dormir"])
     return True
 
 
@@ -404,12 +403,20 @@ def memo_de(carpeta):
     return memo if memo.get("version") == VERSION else {}
 
 
+def anotar_gasto(carpeta, memo, ahora, total):
+    import dormir_claude
+    gastos = dict(memo.get("gasto") or {}, **{dormir_claude.hoy(ahora): total})
+    escribir_atomico(ruta(carpeta, MEMO), json.dumps(dict(memo, gasto=gastos, version=VERSION), ensure_ascii=False))
+
+
 def sonar(cerebro, carpeta, opciones, datos, comienzo):
     import dormir_claude
     memo = memo_de(carpeta)
     try:
-        resultado = dormir_claude.revisar(cerebro, datos["propuestas"], memo, opciones, comienzo)
+        resultado = dormir_claude.revisar(cerebro, datos["propuestas"], memo, opciones, comienzo,
+                                          al_gastar=lambda total: anotar_gasto(carpeta, memo, comienzo, total))
     except Exception as error:
+        memo = memo_de(carpeta)
         memo["ultima"] = {"t": comienzo, "modelo": opciones.get("modelo"), "tope": opciones["tope_usd_por_dia"],
                           "error": f"la revisión falló ({detalle(error)})"}
         resultado = {"memo": memo}
@@ -448,7 +455,7 @@ def aviso_partidas(carpeta, sesion, ahora=None):
     if not con_candado(carpeta, cambio):
         return None
     import ordenar
-    lineas = [f'  {os.path.basename(p["nota"])}: {ordenar.lo_que_pasa(p)}' for p in nuevas]
+    lineas = [f'  {limpiar(os.path.basename(p["nota"]))}: {ordenar.lo_que_pasa(p)}' for p in nuevas]
     return ("Neuromapa partió sola " + cantidad(len(nuevas), "memoria que estaba", "memorias que estaban")
             + " por pasar el tope de un Read (lo agrega un hook y lo dice una vez por chat). No se perdió ningún renglón: "
             "lo que salió está en la nota que dice cada renglón, enlazada desde la original y desde el índice.\n"
@@ -460,6 +467,8 @@ def main_partir_llenas():
     import cerebro as nucleo
     import configuracion
     comando = configuracion.comando()
+    if problemas.de_fondo():
+        return 0
     if not nucleo.CONFIG.get("partir_sola"):
         print(f"«partir_sola» está apagado en el config.json: no parto nada. {comando} --por-partir dice qué haría.")
         return 1
@@ -484,12 +493,13 @@ def main_dormir():
     import configuracion
     import medico
     comienzo = time.time()
+    a_mano = not problemas.de_fondo()
     cerebro = nucleo.desde_disco()
-    partidas, sin_partir = partir_las_llenas(cerebro, comienzo)
+    partidas, sin_partir = partir_las_llenas(cerebro, comienzo) if a_mano else ([], [])
     if partidas:
         cerebro = nucleo.desde_disco()
     nuevas = pasada(cerebro, medico.revisar(cerebro))
-    opciones = nucleo.CONFIG.get("dormir_con_claude")
+    opciones = nucleo.CONFIG.get("dormir_con_claude") if a_mano else None
     datos = guardar_pasada(str(nucleo.DATOS), nuevas, comienzo, round(time.time() - comienzo, 1), bool(opciones),
                            partidas, sin_partir)
     try:

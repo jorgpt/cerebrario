@@ -13,6 +13,7 @@ import time
 import urllib.parse
 from pathlib import Path
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import configuracion
 import registro
 from archivos import es_sensible, escribir_atomico
@@ -24,6 +25,7 @@ VENDOR = CARPETA / "vendor"
 RE_LIBRERIA = re.compile(r"const (URL_\w+) = '(https://[^']+)';")
 RE_INTEGRIDAD = re.compile(r"\[(URL_\w+)\]: '(sha384-[A-Za-z0-9+/=]+)'")
 LIMITE_TEXTO = 60000
+SOLO_EN_LA_NUBE = 0x400000 | 0x1000
 NOMBRES_SALUD = {"rotos": "Enlaces rotos", "huerfanos": "Huérfanas", "sinIndice": "Memorias sin índice",
                  "indiceRoto": "Índice roto", "ambiguos": "Menciones ambiguas", "handoffsAbiertos": "Handoffs abiertos",
                  "respuestasSinAcuse": "Respuestas sin acuse", "medico": "Del médico", "anclas": "Anclas a revisar",
@@ -263,7 +265,13 @@ def orden_natural(texto):
     return [int(t) if t.isdecimal() else t.lower() for t in re.split(r"(\d+)", texto)]
 
 
+class SoloEnLaNube(OSError):
+    pass
+
+
 def leer_texto(ruta):
+    if getattr(ruta.stat(), "st_file_attributes", 0) & SOLO_EN_LA_NUBE:
+        raise SoloEnLaNube("solo en la nube: no la bajo")
     crudo = ruta.read_bytes()
     for codificacion in ("utf-8-sig", "cp1252"):
         try:

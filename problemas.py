@@ -7,7 +7,7 @@ import time
 
 import permisos
 from archivos import dentro, escribir_atomico, hay_candados, leer_objeto_json, soltar_candado, tomar_candado
-from textos import citar
+from textos import citar, limpiar
 
 ARCHIVO = "problemas.json"
 AVISADOS = os.path.join("en-vivo", "avisados.json")
@@ -19,6 +19,7 @@ MOSTRAR = 4
 LARGO_CITA = 120
 ESPERA_CANDADO = 0.5
 REGLAS_YA_EN_SALUD = ("sinIndice", "indiceRoto", "enlaceRoto")
+DE_FONDO = "NEUROMAPA_DE_FONDO"
 
 
 def listar(datos, memorias, raices):
@@ -75,7 +76,7 @@ def listar(datos, memorias, raices):
 
 
 def recortar(texto, largo):
-    texto = " ".join(str(texto).split())
+    texto = " ".join(limpiar(texto).split())
     if len(texto) > largo:
         texto = texto[:largo - 1].rstrip() + "…"
     return texto + "»" if texto.count("«") > texto.count("»") else texto
@@ -118,12 +119,17 @@ def refrescar(carpeta, programa, ahora=None):
     permisos.crear(os.path.dirname(marca))
     with open(marca, "w", encoding="utf-8", newline="\n") as f:
         f.write(f"{int(ahora)}\n")
-    lanzar_de_fondo([sys.executable, programa])
+    lanzar_de_fondo([sys.executable, "-I", "-S", programa])
     return True
 
 
+def de_fondo():
+    return os.environ.get(DE_FONDO) == "1"
+
+
 def lanzar_de_fondo(argumentos):
-    opciones = {"stdin": subprocess.DEVNULL, "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
+    opciones = {"stdin": subprocess.DEVNULL, "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL,
+                "env": dict(os.environ, **{DE_FONDO: "1"})}
     if os.name == "nt":
         opciones["creationflags"] = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
     else:
@@ -186,11 +192,10 @@ def aviso(carpeta, sesion, cwd, raices, cerebro, usuario, ahora=None, memoria_pr
     for p in faltan[:MOSTRAR]:
         linea = f':{p["linea"]}' if p.get("linea") else ""
         arreglo = f' → {recortar(p["arreglo"], 160)}' if p.get("arreglo") else ""
-        lineas.append(f'  - {p["ruta"]}{linea} — {recortar(p["texto"], 240)}{arreglo}')
+        lineas.append(f'  - {limpiar(p["ruta"])}{linea} — {recortar(p["texto"], 240)}{arreglo}')
     if len(faltan) > MOSTRAR:
         import configuracion
         lineas.append(f"  … y {len(faltan) - MOSTRAR} más: {configuracion.comando()} --salud --todo")
     a_quien = f"a {usuario}" if usuario else "al usuario"
-    lineas.append("Si es de la memoria, arreglalo, verificando antes contra el disco o git. Si es un archivo de un "
-                  f"proyecto, arreglalo si lo rompió este chat; si no, avisale {a_quien} antes de tocarlo.")
+    lineas.append(f"Cuando termines lo que pide, avisale {a_quien} en una línea; no los arregles salvo que lo pida.")
     return "\n".join(lineas)

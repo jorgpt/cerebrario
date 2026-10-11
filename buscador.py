@@ -10,11 +10,12 @@ import time
 from collections import Counter
 from pathlib import Path
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import archivos
 import cerebro as nucleo
 import permisos
 from archivos import escribir_atomico
-from textos import cantidad, citar, decimal, sin_marcas
+from textos import cantidad, citar, decimal, limpiar, sin_marcas
 
 K1 = 1.2
 B = 0.75
@@ -171,7 +172,7 @@ AVISOS_VIEJOS = ("hecho", "commitInexistente", "rutaVieja")
 PREFIJO_RESUELTO = "Puede que ya esté resuelto"
 INDICE_GUARDADO = "indice-busqueda.json"
 INDICE_VIEJO = "indice-busqueda.pickle"
-VIDA_INDICE = 15 * 60
+VIDA_INDICE = 6 * 3600
 ESPERA_INDICE = 6.0
 REARMANDO = "rearmando-indice.txt"
 ESPERA_REARMADO = 120
@@ -1429,7 +1430,7 @@ def rearmar_de_fondo(ruta):
             opciones["creationflags"] = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
         else:
             opciones["start_new_session"] = True
-        subprocess.Popen([sys.executable, os.path.abspath(__file__), "--rearmar"], **opciones)
+        subprocess.Popen([sys.executable, "-I", "-S", os.path.abspath(__file__), "--rearmar"], **opciones)
     except OSError:
         return False
     return True
@@ -1519,7 +1520,7 @@ def texto_buscar(indice, resultado):
 def lugar_de_lectura(p):
     hasta = f'-{p["fin"]}' if p["fin"] > p["linea"] else ""
     seccion = f' · {citar(p["seccion"], LARGO_SECCION)}' if p["seccion"] else ""
-    return f'{p["ruta"]}:{p["linea"]}{hasta}{seccion}'
+    return f'{limpiar(p["ruta"])}:{p["linea"]}{hasta}{seccion}'
 
 
 def donde_comprobar(c):
@@ -1532,7 +1533,7 @@ def donde_comprobar(c):
 
 
 def con_funcion(c):
-    return f'{donde_comprobar(c)}  ({c["funcion"]})' if c.get("funcion") else donde_comprobar(c)
+    return limpiar(f'{donde_comprobar(c)}  ({c["funcion"]})' if c.get("funcion") else donde_comprobar(c))
 
 
 def lineas_comprobar(comprobar, detalle=True):
@@ -1552,12 +1553,12 @@ def partes_del_aviso(texto):
 
 def aviso_en_linea(aviso):
     rotulo, texto = partes_del_aviso(aviso["texto"])
-    return f'      {rotulo} en la línea {aviso["linea"]}: {texto}'
+    return f'      {rotulo} en la línea {aviso["linea"]}: {limpiar(texto)}'
 
 
 def aviso_suelto(aviso):
     rotulo, texto = partes_del_aviso(aviso)
-    return f"      {rotulo}: {texto}"
+    return f"      {rotulo}: {limpiar(texto)}"
 
 
 def cambio_en_linea(cambio):

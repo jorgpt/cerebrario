@@ -93,7 +93,7 @@ def carpeta_dicha(nodo, raiz, lista, reales, visto):
 
     for m in RE_CODIGO.finditer(nodo["_cuerpo"]):
         token = RE_RENGLON.sub("", m.group(1).strip().strip(".,;:()«»\"'")).replace("\\", "/")
-        if any(x in token for x in "*?<>|") or "://" in token or " -" in token:
+        if any(x in token for x in "*?<>|") or "://" in token or " -" in token or nucleo.es_de_red(token):
             continue
         ruta = Path(token)
         hallado = False

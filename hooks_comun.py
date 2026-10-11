@@ -10,6 +10,7 @@ CODIGO = os.path.dirname(os.path.abspath(__file__))
 FALLAS = "fallas.json"
 DIAS_FALLAS = 7
 MOSTRAR_FALLAS = 3
+ESPERA_FALLAS = 2.0
 RE_NOMBRE = re.compile(r"[\w.:\-]{1,40}\Z")
 
 
@@ -89,7 +90,7 @@ def carpeta_en_vivo():
 
 def anotar_falla(info, ahora=None, carpeta=None):
     import time
-    from archivos import escribir_atomico, leer_objeto_json
+    from archivos import escribir_atomico, hay_candados, leer_objeto_json, soltar_candado, tomar_candado
     tipo, _, rastro = info
     if tipo is None:
         return
@@ -98,13 +99,19 @@ def anotar_falla(info, ahora=None, carpeta=None):
         return
     ahora = time.time() if ahora is None else ahora
     ruta = os.path.join(carpeta, FALLAS)
-    datos = {k: v for k, v in leer_objeto_json(ruta).items()
-             if isinstance(v, dict) and isinstance(v.get("ultima"), (int, float)) and ahora - v["ultima"] < DIAS_FALLAS * 86400}
     clave = f"{os.path.basename(sys.argv[0] or '?')}|{tipo.__name__}|{lugar_de(rastro)}"
-    previa = datos.get(clave, {})
-    veces = previa.get("veces") if isinstance(previa.get("veces"), int) else 0
-    datos[clave] = {"veces": veces + 1, "ultima": ahora}
-    escribir_atomico(ruta, json.dumps(datos, ensure_ascii=False))
+    candado = tomar_candado(ruta + ".lock", ESPERA_FALLAS)
+    if candado is None and hay_candados():
+        return
+    try:
+        datos = {k: v for k, v in leer_objeto_json(ruta).items() if isinstance(v, dict)
+                 and isinstance(v.get("ultima"), (int, float)) and ahora - v["ultima"] < DIAS_FALLAS * 86400}
+        previa = datos.get(clave, {})
+        veces = previa.get("veces") if isinstance(previa.get("veces"), int) else 0
+        datos[clave] = {"veces": veces + 1, "ultima": ahora}
+        escribir_atomico(ruta, json.dumps(datos, ensure_ascii=False))
+    finally:
+        soltar_candado(candado)
 
 
 def linea_salud(ahora=None, carpeta=None):

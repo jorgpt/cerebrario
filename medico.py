@@ -8,13 +8,14 @@ import re
 import subprocess
 import threading
 import time
+import unicodedata
 import urllib.parse
 from pathlib import Path
 
 import cerebro as nucleo
 import configuracion
 import permisos
-from archivos import escribir_atomico, leer_objeto_json
+from archivos import dentro, escribir_atomico, leer_objeto_json
 from textos import cantidad, citar, decimal, miles
 
 TONOS = ("peligro", "aviso", "revisar", "info")
@@ -39,6 +40,7 @@ RE_BACKTICK = re.compile(r"`([^`\n]{1,300})`")
 RE_HASH = re.compile(r"^([0-9a-f]{7,40})(?:\.\.\.?([0-9a-f]{7,40}))?$")
 RE_CONTEXTO_SESION = re.compile(r"sesi[oó]n|session|uuid|chat|conversaci", re.I)
 RE_CONTEXTO_HUELLA = re.compile(r"\b(?:sha\d*(?:sum)?|md5|crc\d*|hash|huellas?|checksum|blake\d*|xxh\d*)\b|suma de control", re.I)
+RE_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 RE_HASH_CORTADO = re.compile(r"^([0-9a-f]{7,40})(?:…|\.\.\.)?$", re.I)
 RE_SIGUE_LISTA = re.compile(r" ?(?:[,/+]|(?:y|e|o|u|ni|and|or)\b)[^;()]*$", re.I)
 RE_FIN_DE_ORACION = re.compile(r"[.!?](?: |$)")
@@ -532,6 +534,13 @@ def destinos_de_enlaces(texto):
     return salida
 
 
+def se_puede_mirar(carpeta, nombre):
+    if nucleo.es_de_red(nombre) or os.path.isabs(nombre) or re.match(r"^[A-Za-z]:", nombre):
+        return False
+    completa = os.path.normpath(os.path.join(str(carpeta), nombre))
+    return not nucleo.es_de_red(completa) and dentro(completa, str(carpeta))
+
+
 def enlaces_rotos(ruta_nota, texto, antes=""):
     fuente = nucleo.fuente_de_ruta(ruta_nota)
     if fuente is None or fuente.get("historico") or fuente.get("registro"):
@@ -542,7 +551,9 @@ def enlaces_rotos(ruta_nota, texto, antes=""):
     for destino in destinos_de_enlaces(texto or ""):
         limpio = urllib.parse.unquote(destino.split("#")[0].split("?")[0])
         nombre = limpio if limpio.lower().endswith(".md") else f"{limpio}.md"
-        if destino not in ya and destino not in dudosos and not (carpeta / nombre).is_file():
+        if destino in ya or destino in dudosos:
+            continue
+        if not se_puede_mirar(carpeta, nombre) or not (carpeta / nombre).is_file():
             dudosos.append(destino)
     if not dudosos:
         return []
@@ -741,6 +752,7 @@ def regla_indice(cerebro):
                                    "notas.",
                                    f"Dejar un gancho de hasta unas {LARGO_GANCHO} letras (qué es la nota y por dónde "
                                    "retomar) y pasar el estado y el detalle a la nota."))
+    formas = formas_unicode(cerebro)
     for x in cerebro.indice_roto:
         indice = cerebro.por_id.get(x["indice"])
         linea = None
@@ -748,7 +760,8 @@ def regla_indice(cerebro):
             posicion = indice["_cuerpo"].find(x["destino"])
             linea = linea_en(indice, posicion) if posicion >= 0 else None
         salida.append(hallazgo("indiceRoto", x["indice"], linea, "peligro",
-                               f'El índice apunta a {citar(x["destino"], LARGO_CITA)}, que no existe.',
+                               f'El índice apunta a {citar(x["destino"], LARGO_CITA)}, que no existe.'
+                               + otra_forma(formas, x["destino"]),
                                "Sacar la línea del índice o corregir el nombre del archivo."))
     for x in cerebro.rotos:
         nota = cerebro.por_id.get(x["de"])
@@ -756,7 +769,8 @@ def regla_indice(cerebro):
             continue
         posicion = nota["_cuerpo"].find(x["destino"])
         salida.append(hallazgo("enlaceRoto", x["de"], linea_en(nota, posicion) if posicion >= 0 else None, "aviso",
-                               f'Enlaza a {citar(x["destino"], LARGO_CITA)}, que no lleva a ninguna nota.',
+                               f'Enlaza a {citar(x["destino"], LARGO_CITA)}, que no lleva a ninguna nota.'
+                               + otra_forma(formas, x["destino"]),
                                "Corregir el nombre o la ruta, o sacar el enlace si esa nota ya no existe."))
     for identificador in cerebro.sin_indice:
         salida.append(hallazgo("sinIndice", identificador, None, "aviso",
@@ -769,6 +783,23 @@ def regla_indice(cerebro):
                                f"MEMORY.md no la lista, pero se llega por {nombre}, que sí está en el índice.",
                                ""))
     return salida
+
+
+def formas_unicode(cerebro):
+    formas = {}
+    for nodo in cerebro.nodos:
+        tallo = Path(nodo["ruta"]).stem
+        formas.setdefault(unicodedata.normalize("NFC", tallo).lower(), set()).add(tallo.lower())
+    return formas
+
+
+def otra_forma(formas, destino):
+    tallo = re.split(r"[\\/]", urllib.parse.unquote(destino.split("#")[0].split("?")[0]))[-1]
+    tallo = tallo[:-3] if tallo.lower().endswith(".md") else tallo
+    if not tallo or not formas.get(unicodedata.normalize("NFC", tallo).lower(), set()) - {tallo.lower()}:
+        return ""
+    return (" Hay una nota con el mismo nombre escrito con otra forma Unicode (NFC/NFD, pasa con archivos creados en "
+            "macOS): el nombre se ve igual pero no coincide; renombrá el archivo o copiá su nombre exacto en el enlace.")
 
 
 def es_floja(descripcion, nodo):
@@ -1647,6 +1678,7 @@ def palabras_de_carpeta(texto):
 def anclas_de_nodo(nodo):
     cuerpo = nodo["_cuerpo"]
     lineas = {}
+    saltos = [m.start() for m in re.finditer("\n", cuerpo)]
     for m in RE_ANCLA.finditer(cuerpo):
         k = m.start()
         while k > 0 and cuerpo[k - 1] in CARACTERES_RUTA:
@@ -1656,7 +1688,8 @@ def anclas_de_nodo(nodo):
         nombre = token[corte + 1:]
         if not RE_NOMBRE_CS.match(nombre):
             continue
-        a = cuerpo.rfind("\n", 0, k) + 1
+        previos = bisect.bisect_left(saltos, k)
+        a = saltos[previos - 1] + 1 if previos else 0
         desde = int(m.group(2))
         hasta = int(m.group(3)) if m.group(3) else desde
         antes = palabras_de_carpeta(cuerpo[a:k]) if corte >= 0 and k > a and cuerpo[k - 1] == " " else []
@@ -1767,7 +1800,8 @@ def anclas_movidas(candidatas, repos=None, cache=None):
     ruta_cache = CACHE_ANCLAS if cache is None else Path(cache)
     guardado = leer_objeto_json(ruta_cache)
     cabezas = {r: (correr_git(r, ["rev-parse", "HEAD"]) or "").strip() for r in repos}
-    commits = guardado.get("commits") if isinstance(guardado.get("commits"), dict) else {}
+    commits = {k: v for k, v in (guardado.get("commits") if isinstance(guardado.get("commits"), dict) else {}).items()
+               if isinstance(v, str) and (v == "" or RE_SHA.fullmatch(v))}
     viejos = guardado.get("hunks") if guardado.get("cabezas") == cabezas and isinstance(guardado.get("hunks"), dict) else {}
     pedidos = {}
     for c in candidatas:
@@ -1801,7 +1835,8 @@ def anclas_movidas(candidatas, repos=None, cache=None):
         hunks.update({f"{repo}|{commit}|{r}": viejos[f"{repo}|{commit}|{r}"] for r in relativas if r not in faltan})
         for i in range(0, len(faltan), TANDA_DIFF):
             tanda = faltan[i:i + TANDA_DIFF]
-            salida = correr_git(repo, ["-c", "core.quotePath=false", "diff", "-U0", "-M", commit, cabezas[repo], "--"]
+            salida = correr_git(repo, ["-c", "core.quotePath=false", "diff", "-U0", "-M", "--end-of-options", commit,
+                                      cabezas[repo], "--"]
                                 + [":(literal)" + r for r in tanda], espera=60)
             if salida is not None:
                 hallados = hunks_de_diff(salida)

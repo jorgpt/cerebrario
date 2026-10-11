@@ -12,6 +12,7 @@ MAXIMO_FS = 5
 CUENTAS_PISTA = ("sugeridas", "sugeridas_ap", "seguidas", "seguidas_ap", "codigo", "codigo_ap", "codigo_visto",
                  "codigo_ap_visto")
 DIA = 86400
+PODAR_CADA = 3600
 MARCAS = (b'"k":"consulta"', b'"b":"cerebro"', b'"e":"usuario"', b'"k":"leer"', b'"e":"aviso"', b'"e":"recuerda"')
 RE_WORKTREE = re.compile(r"/\.claude/worktrees/[^/]+")
 ALIAS_RUTAS = configuracion.actual()["alias_rutas"]
@@ -57,6 +58,8 @@ class Medidor:
         self.recordadas = 0
         self.recordadas_leidas = 0
         self.de_recuerdos = {}
+        self.ultimo_de = {}
+        self.podado = 0
 
     def anotar(self, ev):
         if registro.de_prueba(ev, self.pruebas):
@@ -65,6 +68,9 @@ class Medidor:
         s = str(ev.get("s") or "")
         a = str(ev.get("a") or "")
         t = numero(ev.get("t"))
+        if s and t:
+            self.ultimo_de[s] = max(t, self.ultimo_de.get(s, 0))
+            self.podar(t)
         if fase == "aviso":
             self.aviso(ev, s, t)
             return
@@ -92,6 +98,18 @@ class Medidor:
             self.consulta(ev, s, a, t)
         elif k == "leer":
             self.lectura(ev, s, a, t)
+
+    def podar(self, t):
+        if t - self.podado < PODAR_CADA:
+            return
+        self.podado = t
+        viejas = {s for s, ultimo in self.ultimo_de.items() if t - ultimo > DIA}
+        for s in viejas:
+            del self.ultimo_de[s]
+            for tabla in (self.pedido, self.de_avisos, self.de_recuerdos):
+                tabla.pop(s, None)
+        for llave in [llave for llave in self.pendientes if llave[0] in viejas]:
+            del self.pendientes[llave]
 
     def consulta(self, ev, s, a, t):
         opcion = ev.get("p") if ev.get("p") in registro.OPCIONES_CONSULTA else "otra"
