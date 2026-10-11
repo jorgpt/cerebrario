@@ -34,3 +34,8 @@ jobs:
         run: python -m compileall -q .
       - name: Prueba de humo (notas inventadas en una carpeta temporal)
         run: python herramientas/prueba_humo.py
+      - name: Pruebas de la auditoría (hooks, médico y servidor)
+        run: |
+          python herramientas/pruebas_hooks.py
+          python herramientas/pruebas_medico.py
+          python herramientas/pruebas_servidor.py

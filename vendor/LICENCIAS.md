@@ -1,6 +1,6 @@
 # Bibliotecas de terceros
 
-Neuromapa trae adentro estas dos bibliotecas, sin cambios, para que el mapa ande sin internet. La página comprueba
+Cerebrario trae adentro estas dos bibliotecas, sin cambios, para que el mapa ande sin internet. La página comprueba
 la huella de cada una (`sha384` en `plantilla.html`); `herramientas/bajar_librerias.py` las vuelve a bajar y
 verificar si hace falta.
 

@@ -68,7 +68,7 @@ def version_de(ruta, base):
 
 
 def buscar_claude():
-    elegido = os.environ.get("NEUROMAPA_CLAUDE") or shutil.which("claude")
+    elegido = os.environ.get("CEREBRARIO_CLAUDE") or shutil.which("claude")
     if elegido:
         return elegido
     if os.environ.get("APPDATA"):
@@ -116,8 +116,8 @@ def llamar(claude, pedido, esquema, modelo, tope, herramientas="", carpetas=(), 
     for carpeta in carpetas:
         orden += ["--add-dir", carpeta]
     entorno = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
-    entorno["NEUROMAPA_PRUEBA"] = "1"
-    with tempfile.TemporaryDirectory(prefix="neuromapa-dormir-") as vacia:
+    entorno["CEREBRARIO_PRUEBA"] = "1"
+    with tempfile.TemporaryDirectory(prefix="cerebrario-dormir-") as vacia:
         try:
             proceso = subprocess.run(orden, input=pedido, cwd=vacia, env=entorno, capture_output=True, text=True,
                                      encoding="utf-8", errors="replace", timeout=ESPERA_LLAMADA,

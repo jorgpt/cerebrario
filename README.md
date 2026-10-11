@@ -1,13 +1,17 @@
-# Neuromapa
+# Cerebrario
 
-[![Pruebas](https://github.com/lumiel777/neuromapa/actions/workflows/pruebas.yml/badge.svg)](https://github.com/lumiel777/neuromapa/actions/workflows/pruebas.yml)
+[![Pruebas](https://github.com/jorgpt/cerebrario/actions/workflows/pruebas.yml/badge.svg)](https://github.com/jorgpt/cerebrario/actions/workflows/pruebas.yml)
 
 **La memoria de Claude Code como un cerebro 3D en vivo.** Un médico que avisa cuando tus notas quedaron viejas y un
 buscador que le da a Claude lo que ya sabe, antes de que lo vuelva a averiguar.
 
-*[English version](README.en.md)* · **[Wiki: la guía paso a paso](https://github.com/lumiel777/neuromapa/wiki)**
+*[English version](README.en.md)* · **[Cómo está hecho](docs/ARQUITECTURA.md)** · **[Auditoría](docs/AUDITORIA.md)**
 
-![Neuromapa con las notas de ejemplo de la demo](docs/neuromapa.gif)
+> **Basado en [Neuromapa](https://github.com/lumiel777/neuromapa) de lumiel777 (MIT).** Cerebrario es un fork
+> auditado: mismas funciones, con 32 correcciones de seguridad y robustez. La lista está en
+> [«Qué cambió respecto a Neuromapa»](#qué-cambió-respecto-a-neuromapa).
+
+![Cerebrario con las notas de ejemplo de la demo](docs/cerebrario.gif)
 
 ## Qué hace
 
@@ -17,11 +21,11 @@ buscador que le da a Claude lo que ya sabe, antes de que lo vuelva a averiguar.
 - **En vivo.** Mientras Claude trabaja, se ve qué nota lee, qué archivo edita, qué agente lanzó y en qué chat. Abajo,
   el río del tiempo muestra los últimos 10 minutos con una línea por chat: cada cosa que hizo, cuándo le escribiste,
   los agentes que lanzó y si está esperando tu OK.
-- **Un médico.** `/neuromapa:salud` revisa la memoria: enlaces a notas que ya no existen, notas que nadie nombra,
+- **Un médico.** `/cerebrario:salud` revisa la memoria: enlaces a notas que ya no existen, notas que nadie nombra,
   memorias repetidas o que el índice no lista, y encabezados incompletos. Si sumás tus proyectos al `config.json`, también
   `archivo:línea` que se corrieron, commits que no existen y notas que dicen que algo no anda cuando un commit posterior
   parece haberlo arreglado; y las cifras que cargues en `hechos.json`, el día que dejen de ser ciertas.
-- **Un buscador.** `/neuromapa:sobre tema` dice qué notas leer primero, avisa los datos viejos, junta las decisiones
+- **Un buscador.** `/cerebrario:sobre tema` dice qué notas leer primero, avisa los datos viejos, junta las decisiones
   anotadas que tocan el tema y nombra el código que esas notas citan, para comprobarlo antes de responder. Claude lo
   puede usar cuando quiera; con el contexto automático, le llega solo en cada pedido. En el mapa se ve por qué eligió
   cada nota: el rayo sale de un color según el motivo (tus palabras, un índice que la nombra o lo aprendido) y la nota
@@ -32,8 +36,8 @@ buscador que le da a Claude lo que ya sabe, antes de que lo vuelva a averiguar.
   horas. En el mapa, las conexiones que más se usan se engrosan, con cuentitas de luz, y los pulsos corren más rápido
   por ellas (como la mielina); lo que se usa junto sin estar enlazado aparece como conexión «Aprendida». Todo cambia
   en vivo: el camino que un chat recorre se ilumina, los nuevos nacen y los olvidados se apagan, y el bloque «Lo que
-  aprendió» muestra qué está uniendo mientras Claude trabaja; `neuromapa --aprendido` lo cuenta,
-  `neuromapa --aprendido archivo` dice con qué se usa ese archivo y `neuromapa --olvidar` borra una unión que no
+  aprendió» muestra qué está uniendo mientras Claude trabaja; `cerebrario --aprendido` lo cuenta,
+  `cerebrario --aprendido archivo` dice con qué se usa ese archivo y `cerebrario --olvidar` borra una unión que no
   querés (o todo lo de un archivo). Cada uno aprende en
   su computadora, de su propio uso, y arranca sabiendo algo gracias a las charlas que Claude Code ya tenía guardadas.
 - **Avisos automáticos.** Cuando Claude crea una memoria parecida a otra, cuando dos chats editan el mismo archivo,
@@ -55,7 +59,7 @@ buscador que le da a Claude lo que ya sabe, antes de que lo vuelva a averiguar.
 - Acertó igual o algo más (Opus 82 → 86 %, Sonnet 58 → 72 %), pero esa diferencia todavía no es estadísticamente
   segura.
 
-**Segunda medición, con esta versión:** 100 corridas de Sonnet sobre las mismas 50 preguntas, con y sin Neuromapa la
+**Segunda medición, con esta versión:** 100 corridas de Sonnet sobre las mismas 50 preguntas, con y sin Cerebrario la
 misma noche, y otros 30 jueces ciegos.
 
 - La nota de las respuestas subió **de 6,4 a 7,0** sobre 10 (mejor en 29 preguntas, peor en 11). Esta vez la
@@ -77,13 +81,13 @@ No se midieron charlas largas.
 ## Instalar
 
 ```
-claude plugin marketplace add lumiel777/neuromapa
-claude plugin install neuromapa@neuromapa
+claude plugin marketplace add jorgpt/cerebrario
+claude plugin install cerebrario@cerebrario
 ```
 
-O, adentro de una sesión de Claude Code: `/plugin marketplace add lumiel777/neuromapa` y después `/plugin install neuromapa@neuromapa`.
+O, adentro de una sesión de Claude Code: `/plugin marketplace add jorgpt/cerebrario` y después `/plugin install cerebrario@cerebrario`.
 
-La primera vez que abras Claude Code después de instalarlo, Neuromapa avisa que quedó instalado y cómo abrir el mapa.
+La primera vez que abras Claude Code después de instalarlo, Cerebrario avisa que quedó instalado y cómo abrir el mapa.
 Si falta Python, lo avisa al abrir Claude Code y no hace nada hasta que lo instales. Si al instalar Claude Code
 dice que hay 2 opciones sin configurar («userConfig options not yet set»), es normal: las dos tienen su valor de
 fábrica y se cambian cuando quieras (ver [Opciones](#opciones)).
@@ -91,24 +95,24 @@ fábrica y se cambian cuando quieras (ver [Opciones](#opciones)).
 ## Actualizar
 
 ```
-claude plugin marketplace update neuromapa
-claude plugin update neuromapa@neuromapa
+claude plugin marketplace update cerebrario
+claude plugin update cerebrario@cerebrario
 ```
 
 Después cerrá y volvé a abrir Claude Code: la versión nueva entra recién ahí. Si el mapa estaba prendido, abrilo con
-`/neuromapa:abrir --reiniciar`, porque el que sigue prendido tiene la versión de antes. Tu configuración y lo aprendido
+`/cerebrario:abrir --reiniciar`, porque el que sigue prendido tiene la versión de antes. Tu configuración y lo aprendido
 quedan como estaban.
 
 ## Usar
 
 | Qué | Cómo |
 |---|---|
-| Abrir el mapa en vivo | `/neuromapa:abrir` |
-| Qué se sabe de un tema | `/neuromapa:sobre cómo decide el programador si riega` |
-| Revisar la memoria | `/neuromapa:salud` |
-| Probar con notas inventadas | `/neuromapa:abrir --demo` (ver [demo/LEEME.md](demo/LEEME.md)) |
+| Abrir el mapa en vivo | `/cerebrario:abrir` |
+| Qué se sabe de un tema | `/cerebrario:sobre cómo decide el programador si riega` |
+| Revisar la memoria | `/cerebrario:salud` |
+| Probar con notas inventadas | `/cerebrario:abrir --demo` (ver [demo/LEEME.md](demo/LEEME.md)) |
 
-Mientras el plugin está prendido, Claude tiene además el comando `neuromapa` en su consola (`neuromapa --help` lista
+Mientras el plugin está prendido, Claude tiene además el comando `cerebrario` en su consola (`cerebrario --help` lista
 las opciones) y lo puede usar cuando lo necesite. En tu propia terminal ese comando no está; ahí sirve lo de [Sin instalar el plugin](#sin-instalar-el-plugin).
 
 El mapa se apaga solo 10 minutos después de cerrar su última pestaña; si lo volvés a abrir mientras está prendido,
@@ -117,7 +121,7 @@ se reusa (con `--reiniciar` arranca uno nuevo). En el mapa, `?` muestra la ayuda
 
 ## Opciones
 
-En `/plugin configure neuromapa@neuromapa` (o en `/config`):
+En `/plugin configure cerebrario@cerebrario` (o en `/config`):
 
 - **Contexto automático en cada pedido** (`servir_contexto`), apagado de fábrica. Prendido, también le recuerda a
   Claude la nota que se suele leer con cada archivo de código que edita, y que pase a la memoria lo decidido cuando la
@@ -125,22 +129,22 @@ En `/plugin configure neuromapa@neuromapa` (o en `/config`):
   Aun apagado, una vez por chat le avisa a Claude
   los problemas nuevos de tus notas (rutas o enlaces rotos, memorias sin índice y posibles duplicados).
 - **Carpeta de datos** (`carpeta_datos`): dónde guarda su configuración, el registro en vivo y la página. Si la dejás
-  vacía, usa la carpeta propia del plugin (`~/.claude/plugins/data/neuromapa-neuromapa/`), que se borra al
+  vacía, usa la carpeta propia del plugin (`~/.claude/plugins/data/cerebrario-cerebrario/`), que se borra al
   desinstalarlo. Si elegís otra, que sea solo tuya (ver [Privacidad](#privacidad)).
 
-Sin configurar nada, Neuromapa lee la memoria de Claude Code y tus `CLAUDE.md` de `~/.claude`. Para sumar proyectos,
+Sin configurar nada, Cerebrario lee la memoria de Claude Code y tus `CLAUDE.md` de `~/.claude`. Para sumar proyectos,
 documentos, lóbulos o el freno de agentes, escribí un `config.json` en la carpeta de datos; el de
 [demo/config.json](demo/config.json) sirve de ejemplo, y [docs/como-funciona.md](docs/como-funciona.md) explica cada campo.
 
 ## Desinstalar
 
 ```
-claude plugin uninstall neuromapa@neuromapa
-claude plugin marketplace remove neuromapa
+claude plugin uninstall cerebrario@cerebrario
+claude plugin marketplace remove cerebrario
 ```
 
 Se borra su carpeta de datos, salvo que hayas elegido una propia en `carpeta_datos` o que desinstales con
-`--keep-data`. Tus notas no se tocan: Neuromapa
+`--keep-data`. Tus notas no se tocan: Cerebrario
 no escribe en la memoria por su cuenta. Cuando encuentra un problema se lo cuenta a Claude, y es Claude quien puede
 arreglarlo.
 
@@ -152,7 +156,7 @@ arreglarlo.
   `cdn.jsdelivr.net`, con una huella (SRI) que el navegador comprueba antes de usarlas.
 - **Qué corre en tu PC:** los hooks de Claude Code corren los `hook_*.py` con tu Python. El médico lee la historia de
   tus proyectos con `git`, solo para leer; el historial guarda las versiones de tus notas con `git`, en un repositorio
-  propio dentro de la carpeta de datos. `/neuromapa:abrir` levanta el servidor del mapa y abre tu navegador. El índice
+  propio dentro de la carpeta de datos. `/cerebrario:abrir` levanta el servidor del mapa y abre tu navegador. El índice
   de búsqueda y la lista de problemas se rearman en segundo plano con el mismo Python. Dormir con Claude, si lo
   prendés, corre tu `claude`. `herramientas/bajar_librerias.py` baja d3 y marked de `cdn.jsdelivr.net`, pero es para
   quien mantiene el proyecto: ningún hook lo corre. El código de `demo/` es de proyectos inventados y no se ejecuta.
@@ -160,20 +164,18 @@ arreglarlo.
   elijas. `--partir` (pasar lo viejo de una nota larga a otra nota) y `--renombrar` (cambiarle el nombre a una nota y
   a lo que la nombra en la memoria) muestran primero el plan y lo hacen recién con el código de ese plan
   (`--confirmar`); antes copian las notas como estaban a `respaldos/`, dentro de la carpeta de datos. Fuera de eso,
-  Neuromapa no escribe en tus notas. La única excepción la prendés vos: con `partir_sola` en el `config.json`, la
-  pasada de cada día parte sola la memoria que está por llenarse: pasa sus entradas más viejas a una nota de historia
+  Cerebrario no escribe en tus notas. La única excepción la prendés vos: con `partir_sola` en el `config.json`, la
+  pasada que corrés a mano (`cerebrario --dormir` o `--partir-llenas`; nunca desde un hook) parte la memoria que está por llenarse: pasa sus entradas más viejas a una nota de historia
   o, si no tiene fechas, su segunda mitad a una nota «parte 2». Lo hace con la misma copia de antes y sin perder un
-  renglón, lo anota en `respaldos/partidas.log` y se lo avisa a Claude. Si la nota se estaba editando, vuelve a probar
-  a la media hora con un proceso de fondo del mismo Python (ver [cómo funciona](docs/como-funciona.md)). Viene
-  apagado.
+  renglón, lo anota en `respaldos/partidas.log` y se lo avisa a Claude. Si la nota se estaba editando, la saltea y la parte la próxima vez que lo corras. Viene apagado.
 - **Reglas y skills, solo si las confirmás:** `--reglas` y `--recetas` proponen pasar una memoria a regla por carpeta
   o una receta a skill, y solo leen. `--regla` y `--receta` muestran el texto y, recién con el código de ese texto
   (`--confirmar`), escriben un archivo fuera de la memoria: en `.claude/rules/` o `.claude/skills/` del proyecto (o en
   tu carpeta personal de skills, si la nota no es de ningún proyecto). Ese archivo copia texto de tu memoria a la
   carpeta del proyecto: si el proyecto se sube a un repositorio y `.claude/` no está ignorada, viaja con él. No pisan
   un archivo que no hayan escrito ellos.
-- **Dormir con Claude, solo si lo prendés** (`dormir_con_claude` en el `config.json`): la pasada de cada día le manda a
-  Claude, con tu propio Claude Code, renglones de tus notas y los cambios de algunos commits (nunca los de archivos
+- **Dormir con Claude, solo si lo prendés** (`dormir_con_claude` en el `config.json`): la pasada que corrés a mano con
+  `cerebrario --dormir` (nunca la que lanza un hook) le manda a Claude, con tu propio Claude Code, renglones de tus notas y los cambios de algunos commits (nunca los de archivos
   sensibles), igual que en cualquier charla, y gasta de tu cuenta hasta el tope que pongas por día.
 - **Para contar tokens y errores**, `--salud`, el freno y las lecciones leen las charlas que guarda Claude Code en
   `~/.claude/projects`. No las copian ni las mandan a ningún lado. El aprendizaje también las lee una vez, para
@@ -199,23 +201,23 @@ arreglarlo.
   empezar desde ahí. `--sobre` y `--buscar` con `--al FECHA` responden con la memoria como estaba ese día: para eso
   copian esa versión a la carpeta temporal de tu cuenta y la borran al terminar. `--cambios` y el aviso «cambió el…»
   de `--sobre` solo leen ese historial para comparar versiones: no guardan nada.
-- Lo que Claude lee de Neuromapa va a Anthropic como cualquier archivo que Claude abre.
+- Lo que Claude lee de Cerebrario va a Anthropic como cualquier archivo que Claude abre.
 - **La carpeta de datos tiene que ser solo tuya**, no una compartida ni la raíz de un disco que usan otras cuentas de la
-  PC: quien pueda escribir ahí puede cambiar lo que Neuromapa le pasa a Claude. Las carpetas que crea Neuromapa nacen
-  cerradas para tu cuenta, y `/neuromapa:salud` avisa (con el comando para cerrarla) si otra cuenta puede escribir en
+  PC: quien pueda escribir ahí puede cambiar lo que Cerebrario le pasa a Claude. Las carpetas que crea Cerebrario nacen
+  cerradas para tu cuenta, y `/cerebrario:salud` avisa (con el comando para cerrarla) si otra cuenta puede escribir en
   la carpeta de datos o en la del programa.
 
 ## Sin instalar el plugin
 
 ```
-git clone https://github.com/lumiel777/neuromapa neuromapa
-cd neuromapa
-sh bin/neuromapa abrir --demo
+git clone https://github.com/jorgpt/cerebrario cerebrario
+cd cerebrario
+sh bin/cerebrario abrir --demo
 ```
 
-En Windows, desde PowerShell o `cmd`: `bin\neuromapa.cmd abrir --demo`. Cada lanzador busca solo un Python 3.10 o más
-nuevo: `bin/neuromapa` prueba `python3`, `python` y `py`, y `bin\neuromapa.cmd` prueba `py -3` y `python`.
-`sh bin/neuromapa --help` (o `bin\neuromapa.cmd --help`) lista todo lo que hace la consola, y
+En Windows, desde PowerShell o `cmd`: `bin\cerebrario.cmd abrir --demo`. Cada lanzador busca solo un Python 3.10 o más
+nuevo: `bin/cerebrario` prueba `python3`, `python` y `py`, y `bin\cerebrario.cmd` prueba `py -3` y `python`.
+`sh bin/cerebrario --help` (o `bin\cerebrario.cmd --help`) lista todo lo que hace la consola, y
 `python3 herramientas/prueba_humo.py` (en Windows, `py -3 herramientas/prueba_humo.py`) corre las pruebas sin tocar
 nada tuyo.
 
@@ -224,12 +226,51 @@ y Claude no recibe los avisos ni el contexto automático. Para eso, instalá el 
 
 ## Estado
 
-Versión 0.1, en prueba. Probado en Windows y en Linux; en Mac todavía no. La [wiki](https://github.com/lumiel777/neuromapa/wiki)
-tiene la guía paso a paso, las preguntas frecuentes y los problemas más comunes con su solución. Si te invitaron a
+Versión 0.1, en prueba. Probado en Windows y en Linux; en Mac todavía no. La guía paso a paso
+de la [wiki de Neuromapa](https://github.com/lumiel777/neuromapa/wiki) sirve también aquí, cambiando `neuromapa` por `cerebrario`. Si te invitaron a
 probarlo, seguí [docs/probar.md](docs/probar.md). Si usás Obsidian, [docs/obsidian.md](docs/obsidian.md) cuenta cómo
 usarlos juntos. Si algo falla, abrí un issue; si es de seguridad, mirá [SECURITY.md](SECURITY.md).
 Para colaborar, [CONTRIBUTING.md](CONTRIBUTING.md); los cambios de cada versión, en [CHANGELOG.md](CHANGELOG.md).
 
+## Qué cambió respecto a Neuromapa
+
+Cerebrario parte de Neuromapa 0.1.5. Los cambios:
+
+- **Nombre:** el plugin, los comandos (`/cerebrario:salud`, `cerebrario --sobre`…) y las variables
+  (`CEREBRARIO_*`) se llaman Cerebrario. Se instala desde `jorgpt/cerebrario`.
+- **Seguridad:**
+  - Un enlace a una ruta de red (`//servidor/…`, `\servidor\…`) escrito en una nota ya no hace que el hook de
+    edición toque ese servidor. Antes, en Windows, eso entregaba el hash NTLM.
+  - La pista que se le pasa a Claude ya no deja pasar caracteres de control, texto invisible ni etiquetas `<…>`.
+    Además va en un bloque marcado como dato citado.
+  - `--partir --destino` y `--renombrar` ya no aceptan rutas fuera de la memoria, nombres reservados de Windows ni
+    caracteres que rompen enlaces.
+  - El historial no guarda versiones que parecen traer una clave.
+  - El servidor no acepta firmas repetidas, no se cae con una línea mal codificada y corta las conexiones colgadas.
+- **Nada caro ni que reescriba notas desde un hook:**
+  - Con el contexto automático apagado no se lanzan pasadas de fondo.
+  - `dormir_con_claude` (gasta de tu cuenta) y `partir_sola` solo corren con el comando a mano.
+  - El aviso de problemas informa, pero no le pide a Claude que los arregle.
+- **OneDrive y memorias grandes:**
+  - Se saltan las notas «solo en la nube» en lugar de bajarlas.
+  - El índice no se rearma si ninguna nota cambió.
+  - El historial git corre en segundo plano.
+  - Un renglón enorme ya no tarda minutos.
+  - Los permisos de las carpetas de arriba de la de datos no se tocan.
+- **Robustez:** se corrigió lo siguiente:
+  - las carreras en la clave del servidor y en `fallas.json`;
+  - los procesos de fondo que no corrían aislados (`-I -S`);
+  - los lanzadores que se pisaban;
+  - el deshacer que podía caerse;
+  - los hardlinks rotos al escribir;
+  - las skills sin nombre;
+  - los respaldos que crecían sin tope.
+- **Pruebas:** hay 74 pruebas nuevas en `herramientas/pruebas_hooks.py`, `pruebas_medico.py` y
+  `pruebas_servidor.py`, además de la prueba de humo original (791 pruebas).
+
+El detalle de cada hallazgo (severidad, cómo reproducirlo y la prueba que lo cubre) está en
+[docs/AUDITORIA.md](docs/AUDITORIA.md).
+
 ## Licencia
 
-[MIT](LICENSE). Trae adentro d3 (ISC) y marked (MIT), sin cambios: ver [vendor/LICENCIAS.md](vendor/LICENCIAS.md).
+[MIT](LICENSE), conservando el aviso de copyright original de Neuromapa. Trae adentro d3 (ISC) y marked (MIT), sin cambios: ver [vendor/LICENCIAS.md](vendor/LICENCIAS.md).

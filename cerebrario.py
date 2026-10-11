@@ -11,18 +11,18 @@ def main():
     except configuracion.ConfigInvalida as error:
         consejo = ("Si la variable CEREBRO_CONFIG apunta ahí, corregila o sacala." if error.falta
                    else "Arreglá ese archivo o borralo para volver a la de fábrica.")
-        print(f"Neuromapa no pudo leer su configuración: {error}. {consejo}", file=sys.stderr)
+        print(f"Cerebrario no pudo leer su configuración: {error}. {consejo}", file=sys.stderr)
         return 1
 
 
 def correr(argumentos):
     if argumentos[:1] == ["abrir"]:
-        sys.argv = ["neuromapa abrir", "--apagar-solo"] + argumentos[1:]
+        sys.argv = ["cerebrario abrir", "--apagar-solo"] + argumentos[1:]
         import servidor
         return servidor.main()
-    sys.argv = ["neuromapa"] + argumentos
+    sys.argv = ["cerebrario"] + argumentos
     import cerebro
-    return cerebro.main(epilogo="Para ver el mapa en el navegador: neuromapa abrir (con --demo, el de las notas inventadas).")
+    return cerebro.main(epilogo="Para ver el mapa en el navegador: cerebrario abrir (con --demo, el de las notas inventadas).")
 
 
 if __name__ == "__main__":

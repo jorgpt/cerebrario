@@ -22,7 +22,7 @@ def aviso(datos, ahora=None):
     if not freno:
         return None
     if freno.get("workflow_siempre") and datos.get("tool_name") == "Workflow":
-        return ("Neuromapa: este chat quiere lanzar un workflow (varios agentes a la vez), y tu regla es que no se usan "
+        return ("Cerebrario: este chat quiere lanzar un workflow (varios agentes a la vez), y tu regla es que no se usan "
                 "salvo que los pidas. ¿Lanzarlo igual?")
     if not isinstance(ruta, str) or not ruta:
         return None
@@ -44,7 +44,7 @@ def aviso(datos, ahora=None):
     if usado < tope:
         return None
     que = "el workflow" if datos.get("tool_name") == "Workflow" else "otro agente"
-    return ("Neuromapa: los agentes de este chat ya usaron el equivalente a " + gasto.cifra(usado) + " tokens (lo leído de "
+    return ("Cerebrario: los agentes de este chat ya usaron el equivalente a " + gasto.cifra(usado) + " tokens (lo leído de "
             "la caché cuenta un décimo) en la última hora y tu tope "
             "es " + gasto.cifra(tope) + ". ¿Lanzar igual " + que + "?")
 

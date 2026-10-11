@@ -1,6 +1,6 @@
 # Cómo colaborar
 
-Gracias por querer sumar. Neuromapa es chico a propósito: Python estándar y una página HTML. Estas son las reglas
+Gracias por querer sumar. Cerebrario es chico a propósito: Python estándar y una página HTML. Estas son las reglas
 de la casa y el porqué de cada una. (Contributions in English are welcome too.)
 
 ## Antes de cambiar algo
@@ -18,7 +18,7 @@ python3 herramientas/prueba_humo.py
 los lanzadores con Git Bash y con PowerShell) sin tocar tus notas. Tiene que dar todo bien antes de mandar un
 cambio. Las mismas pruebas corren en GitHub con Windows, Linux y Mac, en Python 3.10 y 3.13.
 
-Para ver el mapa con notas inventadas: `sh bin/neuromapa abrir --demo`, o `bin\neuromapa.cmd abrir --demo` en Windows
+Para ver el mapa con notas inventadas: `sh bin/cerebrario abrir --demo`, o `bin\cerebrario.cmd abrir --demo` en Windows
 (ver [demo/LEEME.md](demo/LEEME.md)).
 
 ## Las reglas y por qué
@@ -36,7 +36,7 @@ Para ver el mapa con notas inventadas: `sh bin/neuromapa abrir --demo`, o `bin\n
   mensajes, comandos, búsquedas ni direcciones web completas. Cualquier campo nuevo pasa por esa vara, y la prueba de
   humo lo revisa con un texto secreto.
 - **Los hooks no rompen Claude Code.** Ante cualquier error terminan con 0 y sin imprimir nada que no sea su JSON.
-  Para ver esos errores mientras probás, `NEUROMAPA_DEPURAR=1` los muestra en la salida de errores.
+  Para ver esos errores mientras probás, `CEREBRARIO_DEPURAR=1` los muestra en la salida de errores.
 
 ## Commits y pull requests
 
@@ -45,9 +45,9 @@ Para ver el mapa con notas inventadas: `sh bin/neuromapa abrir --demo`, o `bin\n
 
 ## Sacar una versión
 
-- Subí `version` en `.claude-plugin/plugin.json`, que es el único lugar donde está (`neuromapa --version` lo lee de
+- Subí `version` en `.claude-plugin/plugin.json`, que es el único lugar donde está (`cerebrario --version` lo lee de
   ahí), y anotá los cambios en `CHANGELOG.md` bajo ese número. Claude Code usa ese número para saber si hay algo
   nuevo: si no sube, `claude plugin update` puede decir que ya está al día y no traer los cambios.
-- `claude plugin tag` crea la etiqueta `neuromapa--v<versión>` y revisa antes que el manifiesto y el marketplace
+- `claude plugin tag` crea la etiqueta `cerebrario--v<versión>` y revisa antes que el manifiesto y el marketplace
   coincidan.
 - Para un problema de seguridad, no abras un issue: mirá [SECURITY.md](SECURITY.md).

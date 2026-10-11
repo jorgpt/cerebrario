@@ -299,9 +299,9 @@ def armar(datos, base):
 
 def comando():
     partes = [p.lower() for p in CARPETA.parts]
-    en_plugin = (os.environ.get("CLAUDE_PLUGIN_ROOT") or os.path.basename(sys.argv[0] or "").startswith("neuromapa")
+    en_plugin = (os.environ.get("CLAUDE_PLUGIN_ROOT") or os.path.basename(sys.argv[0] or "").startswith("cerebrario")
                  or any(partes[i:i + 2] == ["plugins", "cache"] for i in range(len(partes))))
-    base = "neuromapa" if en_plugin else "python " + str(CARPETA / "cerebro.py").replace("\\", "/")
+    base = "cerebrario" if en_plugin else "python " + str(CARPETA / "cerebro.py").replace("\\", "/")
     return f"{base} --demo" if archivo() == DEMO else base
 
 

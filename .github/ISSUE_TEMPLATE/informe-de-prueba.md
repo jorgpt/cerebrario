@@ -1,6 +1,6 @@
 ---
 name: Informe de prueba
-about: Contá cómo te fue probando Neuromapa (ver docs/probar.md)
+about: Contá cómo te fue probando Cerebrario (ver docs/probar.md)
 title: "Prueba: "
 labels: prueba
 ---
@@ -10,18 +10,18 @@ labels: prueba
 **Sistema:** (Windows, Mac o Linux, y versión)
 **Python:** (`python3 --version`; en Windows, `py -3 --version`)
 **Claude Code:** (`claude --version`)
-**Neuromapa:** (la versión que muestra `claude plugin list`)
+**Cerebrario:** (la versión que muestra `claude plugin list`)
 **En Windows, ¿tenés Git Bash?:** sí / no
 
 **¿Cuánto tardaste en instalarlo?**
 
 **¿Te trabaste en algún paso? ¿En cuál?**
 
-**Números de `/neuromapa:salud`:** graves: · avisos: · para revisar:
+**Números de `/cerebrario:salud`:** graves: · avisos: · para revisar:
 
 **¿Lo que marcó era cierto?**
 
-**¿`/neuromapa:sobre` te llevó a las notas correctas?**
+**¿`/cerebrario:sobre` te llevó a las notas correctas?**
 
 **¿El mapa se abrió y se movió fluido?**
 

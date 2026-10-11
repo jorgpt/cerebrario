@@ -72,12 +72,12 @@ VIDA_ENTRADA = 60
 TOPE_CONEXION = 30
 CABECERA_CLAVE = "X-Cerebro-Clave"
 CABECERA_FIRMA = "X-Cerebro-Firma"
-SIN_CLAVE = ("<!doctype html><meta charset=\"utf-8\"><title>Neuromapa</title>"
+SIN_CLAVE = ("<!doctype html><meta charset=\"utf-8\"><title>Cerebrario</title>"
              "<p style=\"font:16px system-ui;margin:40px\">Falta la clave. "
-             "Abrí el mapa con <b>/neuromapa:abrir</b> en Claude Code (sin el plugin, <code>sh bin/neuromapa abrir</code>, "
-             "o <code>bin\\neuromapa.cmd abrir</code> en Windows): abre el navegador con la clave puesta. Para entrar a "
+             "Abrí el mapa con <b>/cerebrario:abrir</b> en Claude Code (sin el plugin, <code>sh bin/cerebrario abrir</code>, "
+             "o <code>bin\\cerebrario.cmd abrir</code> en Windows): abre el navegador con la clave puesta. Para entrar a "
              "mano, agregale a la dirección <code>?clave=</code> y la clave que está en <code>en-vivo/clave.txt</code>, "
-             "en la carpeta de datos de Neuromapa.</p>").encode("utf-8")
+             "en la carpeta de datos de Cerebrario.</p>").encode("utf-8")
 ERRORES = {400: "El pedido vino mal armado.", 403: "Desde ahí no se puede entrar al mapa.",
            404: "No hay nada en esa dirección.", 501: "El mapa solo atiende pedidos para ver la página."}
 REINTENTOS = 3
@@ -205,7 +205,7 @@ def regenerador(ultima):
             if programa is not None and huella_del_programa() != programa:
                 programa = None
                 programa_cambiado.set()
-                print("Se actualizó el programa de Neuromapa: este mapa sigue con el de antes. Para usar el nuevo, abrilo "
+                print("Se actualizó el programa de Cerebrario: este mapa sigue con el de antes. Para usar el nuevo, abrilo "
                       "de nuevo (el mapa nuevo apaga a este solo).", flush=True)
         if toca:
             with regenerar_lock:
@@ -220,7 +220,7 @@ def regenerador(ultima):
             else:
                 fallas += 1
                 if fallas >= REINTENTOS:
-                    print(f"Neuromapa no pudo rearmar la página {fallas} veces seguidas; vuelvo a intentar cuando "
+                    print(f"Cerebrario no pudo rearmar la página {fallas} veces seguidas; vuelvo a intentar cuando "
                           "cambie otra nota.")
                     fallas = 0
                     if h is not None:
@@ -955,7 +955,7 @@ def usar_entrada(numero):
 
 class Manejador(http.server.SimpleHTTPRequestHandler):
     timeout = TOPE_CONEXION
-    error_message_format = ('<!doctype html><meta charset="utf-8"><title>Neuromapa</title>'
+    error_message_format = ('<!doctype html><meta charset="utf-8"><title>Cerebrario</title>'
                             '<p style="font:16px system-ui;margin:40px">%(explain)s</p>')
     error_content_type = "text/html; charset=utf-8"
 
@@ -1140,7 +1140,7 @@ class Manejador(http.server.SimpleHTTPRequestHandler):
             self.sin_clave()
             return
         self.enviar_json(b'{"apagando": true}')
-        print("Otro Neuromapa sobre estos mismos datos pidió el lugar: me apago para que arranque él.", flush=True)
+        print("Otro Cerebrario sobre estos mismos datos pidió el lugar: me apago para que arranque él.", flush=True)
         threading.Thread(target=self.server.shutdown, daemon=True).start()
 
     def buscar(self, camino):
@@ -1255,12 +1255,12 @@ class Servidor(http.server.ThreadingHTTPServer):
     def handle_error(self, request, client_address):
         if isinstance(sys.exc_info()[1], (ConnectionError, TimeoutError)):
             return
-        print(f"Neuromapa: falló un pedido de {client_address[0]} (sigue andando). El detalle, en inglés:", file=sys.stderr)
+        print(f"Cerebrario: falló un pedido de {client_address[0]} (sigue andando). El detalle, en inglés:", file=sys.stderr)
         traceback.print_exc()
 
 
 def texto_uso():
-    nombre = "neuromapa abrir" if sys.argv[0] == "neuromapa abrir" else "servidor.py"
+    nombre = "cerebrario abrir" if sys.argv[0] == "cerebrario abrir" else "servidor.py"
     return f"Uso: {nombre} [--sin-navegador] [--puerto N] [--demo] [--reiniciar]"
 
 
@@ -1438,7 +1438,7 @@ def apagar_sin_pestanas(servidor, espera=APAGAR_SIN_PESTANAS, cada=15):
         elif vacio_desde is None:
             vacio_desde = time.monotonic()
         elif time.monotonic() - vacio_desde >= espera:
-            print("Neuromapa se apagó: no había ninguna pestaña abierta.")
+            print("Cerebrario se apagó: no había ninguna pestaña abierta.")
             servidor.shutdown()
             return
 
@@ -1466,7 +1466,7 @@ def main():
     if ocupado:
         anterior, candado = esperar_al_otro(ruta_candado)
         if anterior is None and candado is None:
-            print("Otro Neuromapa está arrancando sobre estos mismos datos y no terminó de arrancar: esperá unos segundos "
+            print("Otro Cerebrario está arrancando sobre estos mismos datos y no terminó de arrancar: esperá unos segundos "
                   "y volvé a abrirlo.")
             return 1
     else:
@@ -1482,29 +1482,29 @@ def main():
 def arrancar(anterior, candados, ruta_candado, puertos, abrir, solo):
     reiniciar = "--reiniciar" in sys.argv
     if solo and anterior and not reiniciar:
-        print(f"Neuromapa ya estaba prendido: {a_la_vista(anterior)}")
+        print(f"Cerebrario ya estaba prendido: {a_la_vista(anterior)}")
         print(aviso_navegador(abrir_navegador(direccion_para_abrir(anterior)) if abrir else None, solo))
         return 0
     if anterior:
         if not pedir_apagado(anterior):
-            print(f"Hay otro Neuromapa prendido sobre estos mismos datos (puerto {anterior}) y no se apagó: cerrá su ventana "
+            print(f"Hay otro Cerebrario prendido sobre estos mismos datos (puerto {anterior}) y no se apagó: cerrá su ventana "
                   "y volvé a abrir este. Dos a la vez se pisan lo aprendido.")
             return 1
         if candados[0] is None and hay_candados() and EN_VIVO.is_dir():
             candados[0] = tomar_candado(ruta_candado, ESPERA_APAGADO)
             if candados[0] is None:
-                print("El otro Neuromapa no terminó de apagarse: cerrá su ventana y volvé a abrir este.")
+                print("El otro Cerebrario no terminó de apagarse: cerrá su ventana y volvé a abrir este.")
                 return 1
         if reiniciar:
             print("Apagué el mapa que estaba prendido y arranco uno nuevo, con la versión y la configuración de ahora.",
                   flush=True)
         else:
-            print("Había otro Neuromapa prendido sobre estos datos: lo apagué y arranco en su lugar.", flush=True)
+            print("Había otro Cerebrario prendido sobre estos datos: lo apagué y arranco en su lugar.", flush=True)
         if len(puertos) > 1:
             puertos = [anterior] + [p for p in puertos if p != anterior]
     elif configuracion.donde.proceso_vivo(leer_objeto_json(EN_VIVO / "servidor.json").get("pid")):
-        print("Aviso: hay otro proceso anotado como Neuromapa sobre estos datos que no respondió (puede ser una versión "
-              "vieja). Si es otra ventana de Neuromapa, cerrala: dos a la vez se pisan lo aprendido.", flush=True)
+        print("Aviso: hay otro proceso anotado como Cerebrario sobre estos datos que no respondió (puede ser una versión "
+              "vieja). Si es otra ventana de Cerebrario, cerrala: dos a la vez se pisan lo aprendido.", flush=True)
     huella = calcular_huella()
     if not generar():
         if sys.stdin and sys.stdin.isatty():
@@ -1535,7 +1535,7 @@ def arrancar(anterior, candados, ruta_candado, puertos, abrir, solo):
         pass
     direccion = direccion_para_abrir(servidor.server_address[1], propia=True)
     demo = " (demo)" if configuracion.archivo() == configuracion.DEMO else ""
-    print(f"Neuromapa en vivo{demo}: {a_la_vista(servidor.server_address[1])}", flush=True)
+    print(f"Cerebrario en vivo{demo}: {a_la_vista(servidor.server_address[1])}", flush=True)
     if solo:
         threading.Thread(target=apagar_sin_pestanas, args=(servidor,), daemon=True).start()
     print(aviso_navegador(abrir_navegador(direccion) if abrir else None, solo))

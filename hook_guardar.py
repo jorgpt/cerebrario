@@ -9,7 +9,7 @@ import hooks_comun
 UMBRAL = 5
 PAUSA = 15 * 60
 SIN_TRABAJO = ("md", "txt")
-TEXTO_COMPACTADA = ("Neuromapa: esta charla se acaba de compactar y el resumen de arriba es lo único que queda de lo que se "
+TEXTO_COMPACTADA = ("Cerebrario: esta charla se acaba de compactar y el resumen de arriba es lo único que queda de lo que se "
                     "habló antes. Lo que ese resumen cuenta como decidido, aprendido o pendiente y todavía no está escrito en "
                     "la memoria (o en los documentos del proyecto) se pierde en la próxima compactación o al cerrar la charla. "
                     "Antes de seguir conviene pasarlo a la memoria, en la nota que ya cubre cada tema en vez de crear otra; si "
@@ -48,8 +48,8 @@ def texto_fin(archivos, commits, escribio):
     hecho = "se cambió 1 archivo" if archivos == 1 else "se cambiaron " + cantidad(archivos, "archivo", "archivos")
     if commits:
         hecho += " y se hizo 1 commit" if commits == 1 else " y se hicieron " + cantidad(commits, "commit", "commits")
-    antes = (f"Neuromapa: desde la última vez que esta charla escribió en la memoria {hecho}." if escribio else
-             f"Neuromapa: en esta charla {hecho} y todavía no se escribió nada en la memoria.")
+    antes = (f"Cerebrario: desde la última vez que esta charla escribió en la memoria {hecho}." if escribio else
+             f"Cerebrario: en esta charla {hecho} y todavía no se escribió nada en la memoria.")
     return (antes + " Si salió una decisión, un porqué, un número o un paso que convenga recordar dentro de unas semanas, "
             "este es el momento de anotarlo en la nota que ya cubre ese tema. Si no hay nada nuevo que valga la pena "
             "guardar, no hace falta hacer nada.")

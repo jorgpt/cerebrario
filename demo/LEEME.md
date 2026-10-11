@@ -1,20 +1,20 @@
-# Demo de Neuromapa
+# Demo de Cerebrario
 
-Notas inventadas para ver Neuromapa andando sin usar las tuyas. Son de «Alex», que tiene dos proyectos de mentira:
+Notas inventadas para ver Cerebrario andando sin usar las tuyas. Son de «Alex», que tiene dos proyectos de mentira:
 
 - **vivero** (en español): el sistema de un vivero, con riego automático, stock y ventas por la web.
 - **trailbot** (en inglés): un bot de Telegram que recomienda una caminata para hoy.
 
 ## Cómo abrirla
 
-Con el plugin, en Claude Code: `/neuromapa:abrir --demo`. Sin el plugin, desde la carpeta raíz del repositorio:
+Con el plugin, en Claude Code: `/cerebrario:abrir --demo`. Sin el plugin, desde la carpeta raíz del repositorio:
 
 ```
-sh bin/neuromapa abrir --demo
+sh bin/cerebrario abrir --demo
 ```
 
-(En Windows: `bin\neuromapa.cmd abrir --demo`.) Todo acepta `--demo`, por ejemplo `sh bin/neuromapa --demo --salud` o
-`sh bin/neuromapa --demo --sobre "riego"` (con el plugin, Claude lo corre como `neuromapa --demo …`). La página y el registro de la demo quedan acá adentro
+(En Windows: `bin\cerebrario.cmd abrir --demo`.) Todo acepta `--demo`, por ejemplo `sh bin/cerebrario --demo --salud` o
+`sh bin/cerebrario --demo --sobre "riego"` (con el plugin, Claude lo corre como `cerebrario --demo …`). La página y el registro de la demo quedan acá adentro
 (`demo/cerebro.html` y `demo/en-vivo/`): nunca tocan los tuyos. El botón «Probar» de la página muestra cómo se ve un
 chat trabajando.
 
@@ -24,7 +24,7 @@ chat trabajando.
 documentos de cada proyecto, ideas y decisiones, y un archivo de notas viejas. Más un poco de código de mentira en
 `proyectos/`, para que el médico tenga contra qué comparar. Todo va con rutas relativas a esta carpeta.
 
-Los `CLAUDE.md` de acá son de los proyectos inventados: no son instrucciones para quien trabaja en Neuromapa.
+Los `CLAUDE.md` de acá son de los proyectos inventados: no son instrucciones para quien trabaja en Cerebrario.
 
 ## Los problemas puestos a propósito
 
@@ -48,7 +48,7 @@ Los `CLAUDE.md` de acá son de los proyectos inventados: no son instrucciones pa
 | Enlace roto (en `--salud` y en el panel de salud de la página) | `temporada-alta.md` → `[[calendario-de-ventas]]` |
 
 `arreglo-stock-negativo.md` cita un commit, pero los proyectos de la demo no tienen repositorio git propio: el médico
-avisa que no pudo verificarlo, en vez de darlo por inexistente. Si bajaste Neuromapa con `git clone`, la demo queda
+avisa que no pudo verificarlo, en vez de darlo por inexistente. Si bajaste Cerebrario con `git clone`, la demo queda
 adentro de ese repositorio, y el médico usa su historia solo para decir de cuándo es cada renglón de las notas. Con
 tus notas, los commits se verifican contra los proyectos con git de tu `config.json`.
 

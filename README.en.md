@@ -1,14 +1,14 @@
-# Neuromapa
+# Cerebrario
 
-[![Tests](https://github.com/lumiel777/neuromapa/actions/workflows/pruebas.yml/badge.svg)](https://github.com/lumiel777/neuromapa/actions/workflows/pruebas.yml)
+[![Tests](https://github.com/jorgpt/cerebrario/actions/workflows/pruebas.yml/badge.svg)](https://github.com/jorgpt/cerebrario/actions/workflows/pruebas.yml)
 
 **Claude Code's memory as a live 3D brain.** A doctor that warns you when your notes go stale, and a search that
 hands Claude what it already knows before it goes looking again.
 
 *[Versión en español](README.md)* · The interface and messages are in Spanish for now. ·
-**[Wiki](https://github.com/lumiel777/neuromapa/wiki/English)** (step-by-step guide, in Spanish, with an English summary)
+**Based on [Neuromapa](https://github.com/lumiel777/neuromapa) by lumiel777 (MIT)**: an audited fork with 32 security and robustness fixes ([audit, in Spanish](docs/AUDITORIA.md)).
 
-![Neuromapa with the demo's sample notes](docs/neuromapa.gif)
+![Cerebrario with the demo's sample notes](docs/cerebrario.gif)
 
 ## What it does
 
@@ -18,11 +18,11 @@ hands Claude what it already knows before it goes looking again.
 - **Live.** While Claude works you see which note it reads, which file it edits, which agent it launched, and in which chat.
   At the bottom, the timeline shows the last 10 minutes with one line per chat: everything it did, when you wrote to
   it, the agents it launched, and whether it is waiting for your OK.
-- **A doctor.** `/neuromapa:salud` checks the memory: links to notes that no longer exist, notes nobody links to,
+- **A doctor.** `/cerebrario:salud` checks the memory: links to notes that no longer exist, notes nobody links to,
   duplicated memories or ones the index doesn't list, and incomplete headers. If you add your projects to `config.json`,
   also `file:line` anchors that drifted, commits that don't exist and notes that say something is broken when a later
   commit seems to have fixed it; and the numbers you record in `hechos.json`, the day they stop being true.
-- **A search.** `/neuromapa:sobre topic` says which notes to read first, flags stale facts, gathers the recorded
+- **A search.** `/cerebrario:sobre topic` says which notes to read first, flags stale facts, gathers the recorded
   decisions on that topic and names the code those notes cite, so Claude checks it before answering. Claude can call
   it whenever it wants; with the automatic context on, it gets it on every request. The map shows why it picked each
   note: the ray takes a color by reason (your words, an index that names it, or what it learned) and the note says it,
@@ -33,8 +33,8 @@ hands Claude what it already knows before it goes looking again.
   read in the last few hours. On the map, the most used connections grow thicker, with beads of light, and pulses
   travel faster along them (like myelin); what is used together without being linked shows up as an «Aprendida»
   connection. It all changes live: the path a chat walks lights up, new paths grow and forgotten ones fade, and the
-  «Lo que aprendió» panel shows what it is linking while Claude works; `neuromapa --aprendido` tells you what it
-  learned, `neuromapa --aprendido file` shows what that file is used with, and `neuromapa --olvidar` erases a link
+  «Lo que aprendió» panel shows what it is linking while Claude works; `cerebrario --aprendido` tells you what it
+  learned, `cerebrario --aprendido file` shows what that file is used with, and `cerebrario --olvidar` erases a link
   you don't want (or everything about a file). Each install learns on its own computer, from its own use, and starts out knowing
   something from the chats Claude Code had already saved.
 - **Automatic warnings.** When Claude creates a memory similar to an existing one, when two chats edit the same file,
@@ -56,7 +56,7 @@ blind judges.
 - It got as many right or a few more (Opus 82 → 86 %, Sonnet 58 → 72 %), but that difference is not statistically
   solid yet.
 
-**Second measurement, with this version:** 100 Sonnet runs on the same 50 questions, with and without Neuromapa on
+**Second measurement, with this version:** 100 Sonnet runs on the same 50 questions, with and without Cerebrario on
 the same night, and another 30 blind judges.
 
 - The answers' score went up **from 6.4 to 7.0** out of 10 (better on 29 questions, worse on 11). This time the
@@ -78,13 +78,13 @@ Long conversations were not measured.
 ## Install
 
 ```
-claude plugin marketplace add lumiel777/neuromapa
-claude plugin install neuromapa@neuromapa
+claude plugin marketplace add jorgpt/cerebrario
+claude plugin install cerebrario@cerebrario
 ```
 
-Or, inside a Claude Code session: `/plugin marketplace add lumiel777/neuromapa`, then `/plugin install neuromapa@neuromapa`.
+Or, inside a Claude Code session: `/plugin marketplace add jorgpt/cerebrario`, then `/plugin install cerebrario@cerebrario`.
 
-The first time you open Claude Code after installing it, Neuromapa says it is installed and how to open the map.
+The first time you open Claude Code after installing it, Cerebrario says it is installed and how to open the map.
 If Python is missing, it says so when Claude Code starts and does nothing until you install it. If Claude Code
 says on install that 2 options are not set («userConfig options not yet set»), that is expected: both have defaults
 and you can change them any time (see [Options](#options)).
@@ -92,24 +92,24 @@ and you can change them any time (see [Options](#options)).
 ## Update
 
 ```
-claude plugin marketplace update neuromapa
-claude plugin update neuromapa@neuromapa
+claude plugin marketplace update cerebrario
+claude plugin update cerebrario@cerebrario
 ```
 
 Then close and reopen Claude Code: the new version only takes effect then. If the map was running, open it with
-`/neuromapa:abrir --reiniciar`, because the one still running has the old version. Your configuration and what it
+`/cerebrario:abrir --reiniciar`, because the one still running has the old version. Your configuration and what it
 learned stay as they were.
 
 ## Use
 
 | What | How |
 |---|---|
-| Open the live map | `/neuromapa:abrir` |
-| What is known about a topic | `/neuromapa:sobre weather forecast` |
-| Check the memory | `/neuromapa:salud` |
-| Try it with made-up notes | `/neuromapa:abrir --demo` (see [demo/LEEME.md](demo/LEEME.md), in Spanish) |
+| Open the live map | `/cerebrario:abrir` |
+| What is known about a topic | `/cerebrario:sobre weather forecast` |
+| Check the memory | `/cerebrario:salud` |
+| Try it with made-up notes | `/cerebrario:abrir --demo` (see [demo/LEEME.md](demo/LEEME.md), in Spanish) |
 
-While the plugin is enabled, Claude also has the `neuromapa` command in its shell (`neuromapa --help` lists
+While the plugin is enabled, Claude also has the `cerebrario` command in its shell (`cerebrario --help` lists
 the options) and can use it when it needs to. That command is not in your own terminal; there, use
 [Without installing the plugin](#without-installing-the-plugin).
 
@@ -120,29 +120,29 @@ map, `?` shows help and shortcuts. `A` switches to generic names (anonymous mode
 
 ## Options
 
-In `/plugin configure neuromapa@neuromapa` (or in `/config`):
+In `/plugin configure cerebrario@cerebrario` (or in `/config`):
 
 - **Automatic context on every request** (`servir_contexto`), off by default. When on, it also reminds Claude of the
   note usually read with each code file it edits, and to write down what was decided when the chat is compacted or
   after it changed several files without noting anything (so it isn't lost at the next compaction). Even when off, once per chat it tells Claude about new problems in
   your notes (broken paths or links, memories missing from the index, possible duplicates).
 - **Data folder** (`carpeta_datos`): where it keeps its configuration, the live log and the page. Left empty, it uses
-  the plugin's own folder (`~/.claude/plugins/data/neuromapa-neuromapa/`), which is deleted when you uninstall. If you
+  the plugin's own folder (`~/.claude/plugins/data/cerebrario-cerebrario/`), which is deleted when you uninstall. If you
   pick another one, keep it yours alone (see [Privacy](#privacy)).
 
-With no configuration, Neuromapa reads Claude Code's memory and your `CLAUDE.md` files from `~/.claude`. To add
+With no configuration, Cerebrario reads Claude Code's memory and your `CLAUDE.md` files from `~/.claude`. To add
 projects, documents, lobes or the agent brake, write a `config.json` in the data folder; [demo/config.json](demo/config.json)
 is an example, and [docs/como-funciona.md](docs/como-funciona.md) explains every field (in Spanish).
 
 ## Uninstall
 
 ```
-claude plugin uninstall neuromapa@neuromapa
-claude plugin marketplace remove neuromapa
+claude plugin uninstall cerebrario@cerebrario
+claude plugin marketplace remove cerebrario
 ```
 
 Its data folder is deleted, unless you chose your own in `carpeta_datos` or uninstall with `--keep-data`. Your notes
-are untouched: Neuromapa never
+are untouched: Cerebrario never
 writes to the memory on its own. When it finds a problem it tells Claude, and it's Claude who may fix it.
 
 ## Privacy
@@ -153,14 +153,14 @@ writes to the memory on its own. When it finds a problem it tells Claude, and it
   a hash (SRI) the browser checks before using them.
 - **What runs on your PC:** Claude Code's hooks run the `hook_*.py` files with your Python. The doctor reads your
   projects' history with `git`, read-only; the history keeps your notes' versions with `git`, in its own repository
-  inside the data folder. `/neuromapa:abrir` starts the map's server and opens your browser. The search index and the
+  inside the data folder. `/cerebrario:abrir` starts the map's server and opens your browser. The search index and the
   problem list are rebuilt in the background with the same Python. Sleeping with Claude, if you turn it on, runs your
   `claude`. `herramientas/bajar_librerias.py` downloads d3 and marked from `cdn.jsdelivr.net`, but it is for whoever
   maintains the project: no hook runs it. The code in `demo/` belongs to made-up projects and is never run.
 - **It only changes a note if you approve it:** the nightly pass proposes fixes and `--aplicar` changes only the ones
   you pick. `--partir` (move the old part of a long note into another note) and `--renombrar` (rename a note and
   whatever names it in the memory) first show the plan and only do it with that plan's code (`--confirmar`); before
-  that they copy the notes as they were to `respaldos/`, inside the data folder. Other than that, Neuromapa doesn't
+  that they copy the notes as they were to `respaldos/`, inside the data folder. Other than that, Cerebrario doesn't
   write to your notes. The one exception is something you turn on: with `partir_sola` in `config.json`, the daily pass
   splits a memory that is about to fill up by itself: it moves its oldest entries into a history note or, if it has no
   dates, its second half into a "part 2" note. It does so with the same backup and without losing a line, logs it in
@@ -200,23 +200,23 @@ writes to the memory on its own. When it finds a problem it tells Claude, and it
   from there. `--sobre` and `--buscar` with `--al DATE` answer with the memory as it was that day: to do so they copy
   that version to your account's temp folder and delete it when done. `--cambios` and the “cambió el…” notice in
   `--sobre` only read that history to compare versions: they store nothing.
-- Whatever Claude reads from Neuromapa goes to Anthropic, like any file Claude opens.
+- Whatever Claude reads from Cerebrario goes to Anthropic, like any file Claude opens.
 - **The data folder must be yours alone**, not a shared folder or the root of a drive other accounts on the PC use:
-  whoever can write there can change what Neuromapa passes to Claude. The folders Neuromapa creates start closed to your
-  account, and `/neuromapa:salud` warns (with the command to close it) if another account can write to the data folder
+  whoever can write there can change what Cerebrario passes to Claude. The folders Cerebrario creates start closed to your
+  account, and `/cerebrario:salud` warns (with the command to close it) if another account can write to the data folder
   or the program's folder.
 
 ## Without installing the plugin
 
 ```
-git clone https://github.com/lumiel777/neuromapa neuromapa
-cd neuromapa
-sh bin/neuromapa abrir --demo
+git clone https://github.com/jorgpt/cerebrario cerebrario
+cd cerebrario
+sh bin/cerebrario abrir --demo
 ```
 
-On Windows, from PowerShell or `cmd`: `bin\neuromapa.cmd abrir --demo`. Each launcher finds a Python 3.10 or newer on
-its own: `bin/neuromapa` tries `python3`, `python` and `py`, and `bin\neuromapa.cmd` tries `py -3` and `python`.
-`sh bin/neuromapa --help` (or `bin\neuromapa.cmd --help`) lists everything the terminal tool does, and
+On Windows, from PowerShell or `cmd`: `bin\cerebrario.cmd abrir --demo`. Each launcher finds a Python 3.10 or newer on
+its own: `bin/cerebrario` tries `python3`, `python` and `py`, and `bin\cerebrario.cmd` tries `py -3` and `python`.
+`sh bin/cerebrario --help` (or `bin\cerebrario.cmd --help`) lists everything the terminal tool does, and
 `python3 herramientas/prueba_humo.py` (on Windows, `py -3 herramientas/prueba_humo.py`) runs the tests without
 touching anything of yours.
 
@@ -225,7 +225,7 @@ learn from that, and Claude gets neither the warnings nor the automatic context.
 
 ## Status
 
-Version 0.1, being tested. Tested on Windows and Linux; not yet on Mac. The [wiki](https://github.com/lumiel777/neuromapa/wiki)
+Version 0.1, being tested. Tested on Windows and Linux; not yet on Mac. The [Neuromapa wiki](https://github.com/lumiel777/neuromapa/wiki) (replace `neuromapa` with `cerebrario`)
 has a step-by-step guide, FAQ and troubleshooting (in Spanish, with an
 [English summary](https://github.com/lumiel777/neuromapa/wiki/English)). If you were invited to test it, follow
 [docs/probar.md](docs/probar.md) (in Spanish). If you use Obsidian, [docs/obsidian.md](docs/obsidian.md) explains how

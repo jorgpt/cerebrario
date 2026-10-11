@@ -1,6 +1,6 @@
 ---
 name: Idea
-about: Algo que Neuromapa podría hacer mejor
+about: Algo que Cerebrario podría hacer mejor
 title: ""
 labels: idea
 ---

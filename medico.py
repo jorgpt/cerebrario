@@ -670,8 +670,8 @@ def regla_tamano(cerebro):
                     "casiLlena", nodo["id"], 1, "revisar",
                     f"Es una memoria y está al {int(lleno * 100)} % del tope de un Read (~{miles(tokens)} de "
                     f"{miles(TOKENS_READ)} tokens): si sigue creciendo, Read va a mostrar solo el principio.",
-                    (f"La pasada de cada día la parte sola y lo avisa ({configuracion.comando()} --partir-llenas lo hace "
-                     "ahora): las entradas viejas van a una nota de historia y, si no tiene, la segunda mitad a una "
+                    (f"Con partir_sola prendido, {configuracion.comando()} --partir-llenas la parte "
+                     "cuando lo corras: las entradas viejas van a una nota de historia y, si no tiene, la segunda mitad a una "
                      "«parte 2». A mano: " if sola else "")
                     + f'{configuracion.comando()} --partir "{Path(nodo["ruta"]).name}" lista sus piezas y arma el cambio '
                     "sin perder un renglón."))

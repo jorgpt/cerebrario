@@ -30,12 +30,12 @@ AWS_FALSA = "AKIAPRUEBA0000000000"
 def preparar_entorno():
     for carpeta in (CLAUDE, DATOS, PLUGIN, MEMORIA, PROYECTO):
         carpeta.mkdir(parents=True, exist_ok=True)
-    for nombre in [k for k in os.environ if k.startswith(("CLAUDE_PLUGIN_", "NEUROMAPA_", "CEREBRO_"))]:
+    for nombre in [k for k in os.environ if k.startswith(("CLAUDE_PLUGIN_", "CEREBRARIO_", "CEREBRO_"))]:
         os.environ.pop(nombre)
     os.environ.update({"HOME": str(CASA), "USERPROFILE": str(CASA), "APPDATA": str(CASA / "AppData"),
                        "LOCALAPPDATA": str(CASA / "AppData" / "Local"), "CLAUDE_CONFIG_DIR": str(CLAUDE),
                        "CLAUDE_PLUGIN_DATA": str(PLUGIN), "CEREBRO_CONFIG": str(DATOS / "config.json"),
-                       "NEUROMAPA_CLAUDE": str(CLAUDE_FALSO)})
+                       "CEREBRARIO_CLAUDE": str(CLAUDE_FALSO)})
     (DATOS / "config.json").write_text(json.dumps({"usuario": "Ana"}), encoding="utf-8")
     (MEMORIA / "MEMORY.md").write_text("- [Despliegue](despliegue.md)\n", encoding="utf-8")
     (MEMORIA / "despliegue.md").write_text(
@@ -110,8 +110,8 @@ class H1Inyeccion(unittest.TestCase):
                                          servidor=False) or ""
         self.assertIn("despliegue", pista)
         lineas = pista.splitlines()
-        self.assertTrue(lineas[0].startswith("<neuromapa-pista") and "no instrucciones" in lineas[0], lineas[0])
-        self.assertEqual(lineas[-1], "</neuromapa-pista>")
+        self.assertTrue(lineas[0].startswith("<cerebrario-pista") and "no instrucciones" in lineas[0], lineas[0])
+        self.assertEqual(lineas[-1], "</cerebrario-pista>")
         adentro = "\n".join(lineas[1:-1])
         for c in PELIGROSOS:
             self.assertNotIn(c, adentro)
@@ -455,7 +455,7 @@ class H11Permisos(unittest.TestCase):
 
     def test_h11_no_cierra_carpetas_de_arriba_de_la_de_datos(self):
         """H11: si crea la carpeta de datos y otras de más arriba, cierra la de datos y no las de arriba."""
-        datos = BASE / "h11" / "Bitacora Claude" / "neuromapa"
+        datos = BASE / "h11" / "Bitacora Claude" / "cerebrario"
         en_vivo = datos / "en-vivo"
         esperadas = [str(datos)] if ES_WINDOWS else [str(datos), str(en_vivo)]
         self.assertEqual(self.cerradas(en_vivo, datos), [os.path.abspath(r) for r in esperadas])

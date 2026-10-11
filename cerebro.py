@@ -1419,7 +1419,7 @@ def armar_parser(epilogo):
     argparse_en_castellano()
     parser = argparse.ArgumentParser(description="Arma el mapa de las notas .md (cerebro.html).", epilog=epilogo,
                                      allow_abbrev=False)
-    parser.add_argument("--version", action="version", version=f"Neuromapa {version()}")
+    parser.add_argument("--version", action="version", version=f"Cerebrario {version()}")
     parser.add_argument("--json", dest="ruta_json", help="vuelca además el JSON puro en esta ruta")
     parser.add_argument("--plantilla", default=str(CARPETA / "plantilla.html"), help="la plantilla de la página")
     parser.add_argument("--salida", default=str(DATOS / "cerebro.html"),
@@ -1461,7 +1461,7 @@ def armar_parser(epilogo):
                       help="errores de las herramientas de archivos que se repiten (últimos 7 días), con la regla que "
                            "los evitaría y si están bajando")
     modo.add_argument("--aprendido", nargs="?", const="7", metavar="DÍAS_O_ARCHIVO",
-                      help="lo que Neuromapa aprendió de tu uso (qué archivos se abren juntos y qué pistas sirvieron), "
+                      help="lo que Cerebrario aprendió de tu uso (qué archivos se abren juntos y qué pistas sirvieron), "
                            "con lo de los últimos 7 días o los que digas; con un archivo (nombre o ruta), con qué se "
                            "usa ese")
     modo.add_argument("--olvidar", nargs="+", metavar=("ARCHIVO", "OTRO"),
@@ -1675,7 +1675,7 @@ def imprimir_salud(cerebro, medico, todo, segundos):
                         ("hooks_comun", "leer las fallas de los hooks"),
                         ("dormir", "leer las propuestas de la última pasada"),
                         ("historial", "guardar el historial de la memoria"),
-                        ("hooks_comun", "ver si Neuromapa está instalado dos veces", "linea_doble")):
+                        ("hooks_comun", "ver si Cerebrario está instalado dos veces", "linea_doble")):
         try:
             linea = getattr(importlib.import_module(nombre), funcion[0] if funcion else "linea_salud")()
         except Exception as error:

@@ -1,7 +1,14 @@
 # Cambios
 
-Las versiones siguen el número de `.claude-plugin/plugin.json` (`claude plugin list` lo muestra, y Claude lo ve con `neuromapa --version`). Cada versión que
+Las versiones siguen el número de `.claude-plugin/plugin.json` (`claude plugin list` lo muestra, y Claude lo ve con `cerebrario --version`). Cada versión que
 sale sube ese número; si no, la actualización puede no traer nada (ver [CONTRIBUTING.md](CONTRIBUTING.md)).
+
+## 0.2.0 (Cerebrario): fork auditado
+
+Primera versión con el nombre Cerebrario, basada en Neuromapa 0.1.5 de lumiel777 (MIT). Corrige 32 de los 34
+hallazgos de la auditoría que está en [docs/AUDITORIA.md](docs/AUDITORIA.md); el resumen está en el README, en «Qué
+cambió respecto a Neuromapa». Desde aquí, los comandos son `cerebrario …`. Las entradas de abajo son las de
+Neuromapa y conservan su nombre original.
 
 ## 0.1.5 — en prueba
 
