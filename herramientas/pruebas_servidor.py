@@ -271,5 +271,37 @@ def main():
     return 0 if programa.result.wasSuccessful() else 1
 
 
+class ApagadoConfigurable(unittest.TestCase):
+    def probar(self, valor):
+        antes = os.environ.get("CEREBRARIO_APAGAR_MINUTOS")
+        try:
+            if valor is None:
+                os.environ.pop("CEREBRARIO_APAGAR_MINUTOS", None)
+            else:
+                os.environ["CEREBRARIO_APAGAR_MINUTOS"] = valor
+            return servidor.minutos_para_apagar()
+        finally:
+            if antes is None:
+                os.environ.pop("CEREBRARIO_APAGAR_MINUTOS", None)
+            else:
+                os.environ["CEREBRARIO_APAGAR_MINUTOS"] = antes
+
+    def test_apagado_por_defecto_diez_minutos(self):
+        self.assertEqual(self.probar(None), 600)
+
+    def test_apagado_dos_horas(self):
+        self.assertEqual(self.probar("120"), 7200)
+
+    def test_apagado_valor_raro_usa_el_de_fabrica_y_tiene_topes(self):
+        self.assertEqual(self.probar("muchos"), 600)
+        self.assertEqual(self.probar("0"), 60)
+        self.assertEqual(self.probar("99999"), 24 * 3600)
+
+    def test_nitido_no_baja_la_resolucion(self):
+        html = (CARPETA / "plantilla.html").read_text(encoding="utf-8")
+        self.assertIn("anim.escala = NITIDO ? 1 : 0.5;", html)
+        self.assertIn("seguirDensidad();", html)
+
+
 if __name__ == "__main__":
     sys.exit(main())

@@ -43,7 +43,15 @@ EN_VIVO = cerebro.DATOS / "en-vivo"
 REGISTRO = EN_VIVO / "eventos.jsonl"
 PUERTOS = range(8765, 8771)
 OPCIONES = ("--sin-navegador", "--puerto", "--demo", "--apagar-solo", "--reiniciar")
-APAGAR_SIN_PESTANAS = 10 * 60
+def minutos_para_apagar(defecto=10):
+    try:
+        minutos = int(os.environ.get("CEREBRARIO_APAGAR_MINUTOS", "").strip() or defecto)
+    except ValueError:
+        return defecto * 60
+    return min(max(minutos, 1), 24 * 60) * 60
+
+
+APAGAR_SIN_PESTANAS = minutos_para_apagar()
 ESPERA_APAGADO = 8
 CANDADO_ARRANQUE = "servidor.lock"
 ESPERA_ARRANQUE = 60

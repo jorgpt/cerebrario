@@ -4138,9 +4138,9 @@ body.anonimo #bloque-salud, body.anonimo #bloque-aprendido, body.anonimo #result
     anim.resplandor = false;
     anim.enfoque = false;
     anim.nivel = 1;
-    anim.escala = 0.5;
+    anim.escala = NITIDO ? 1 : 0.5;
     anim.masivoForzado = true;
-    anim.bajadas = ['aristas', 'luces', 'nivel', 'masivo', 'resolucion'];
+    anim.bajadas = NITIDO ? ['aristas', 'luces', 'nivel', 'masivo'] : ['aristas', 'luces', 'nivel', 'masivo', 'resolucion'];
     aviso('La compu dibuja muy lento: bajé la resolución y los efectos, y mientras no pasa nada el cerebro se queda quieto. Si mejora, los vuelvo a subir solo.');
     aplicarModo();
     ajustarLienzo();
@@ -4970,6 +4970,19 @@ body.anonimo #bloque-salud, body.anonimo #bloque-aprendido, body.anonimo #result
       brilloAlfa: parseFloat(v('--brillo-alfa')) || 0,
       nucleo: v('--nucleo') === 'transparent' ? '' : v('--nucleo')
     };
+  }
+
+  const NITIDO = (() => { try { return new URLSearchParams(location.search).has('nitido'); } catch (e) { return false; } })();
+
+  function seguirDensidad() {
+    if (!window.matchMedia) return;
+    let consulta = null;
+    const atar = () => {
+      consulta = window.matchMedia('(resolution: ' + (window.devicePixelRatio || 1) + 'dppx)');
+      const cambio = () => { consulta.removeEventListener('change', cambio); ajustarLienzo(); atar(); };
+      consulta.addEventListener('change', cambio);
+    };
+    try { atar(); } catch (e) {}
   }
 
   function ajustarLienzo() {
@@ -10422,6 +10435,7 @@ body.anonimo #bloque-salud, body.anonimo #bloque-aprendido, body.anonimo #result
       new ResizeObserver(medirBanda).observe($('#banda-local'));
     } else {
       window.addEventListener('resize', () => { ajustarLienzo(); medirBanda(); });
+      seguirDensidad();
     }
   }
 
