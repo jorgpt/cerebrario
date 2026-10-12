@@ -22,7 +22,7 @@ Claude.
 
 ## Hallazgos
 
-Hubo 34 hallazgos distintos: 1 de severidad alta, 11 media y 22 baja. Se arreglaron 32. Los IDs con H son de hooks y
+Hubo 34 hallazgos distintos: 1 de severidad alta, 11 media y 22 baja. Se arreglaron 32; la segunda revisión, al final, cerró 11 más sobre los propios arreglos. Los IDs con H son de hooks y
 pista, los de M del médico y la escritura, y los de S del servidor y el visor. Cada arreglo tiene su prueba en
 `herramientas/pruebas_hooks.py`, `pruebas_medico.py` o `pruebas_servidor.py`, y cada prueba lleva el ID en su nombre.
 Para reproducir un hallazgo, se corre su prueba sobre el código original: ahí falla.
@@ -75,3 +75,22 @@ Para reproducir un hallazgo, se corre su prueba sobre el código original: ahí 
 - `MEMORY.md` de más de 200 renglones: el médico avisa y nunca lo recorta.
 - XSS con títulos de notas.
 - Path traversal contra el servidor.
+
+## Segunda revisión (sobre los propios arreglos)
+
+Una revisión escéptica del commit de arreglos encontró 12 puntos. Se cerraron 11, con pruebas `test_R*`:
+
+- **R1 (alta):** el detector de secretos del historial confundía nombres largos de notas o funciones con claves y
+  dejaba de versionar esas notas. Ahora solo usa patrones de alta confianza: llave privada, `sk-…`, tokens de GitHub,
+  AWS, Slack, Stripe y JWT. `--salud` dice qué tipo de patrón encontró y en qué nota, sin mostrar el valor.
+- **R2:** si no puede revisar una versión, no la guarda.
+- **R3:** los guardados del historial en primer plano usan el mismo candado.
+- **R4:** la pista quita también los caracteres «tag» (U+E0000–E007F) y los selectores de variación.
+- **R5:** las rutas que entran en la pista y en los avisos de los hooks pasan por la misma limpieza.
+- **R6:** las pruebas de M1 usan `sys.addaudithook`, que sí detecta un acceso real.
+- **R7:** un enlace rechazado ya no obliga a leer toda la memoria dentro del hook.
+- **R8:** la poda de respaldos usa su propia opción, `borrar_respaldos_dias`, y viene apagada.
+- **R9, R10 y R11:** textos al día, código muerto quitado y rutas con acentos en git (`-z`).
+
+Queda pendiente **R12 (baja):** si `clave.txt` existe pero es corta y dos procesos del servidor arrancan a la vez,
+pueden quedar con claves distintas. El efecto es que una pestaña pide entrar de nuevo; no abre ningún acceso.

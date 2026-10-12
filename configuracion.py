@@ -11,6 +11,7 @@ CARPETA = Path(__file__).resolve().parent
 PROPIA = CARPETA / "config.json"
 DEMO = CARPETA / "demo" / "config.json"
 BORRAR_REGISTROS_DIAS = 90
+BORRAR_RESPALDOS_DIAS = 0
 TOPE_DORMIR = 20
 TOPE_COMPARAR = 0.5
 PARTIR_SOLA = {"desde": 85, "hasta": 50, "dias_frescos": 3}
@@ -229,11 +230,15 @@ def comparar_aprendido_de(datos):
     return float(valor)
 
 
-def dias_de_registro(datos):
-    dias = datos.get("borrar_registros_dias", BORRAR_REGISTROS_DIAS)
+def dias_de(datos, campo, fabrica):
+    dias = datos.get(campo, fabrica)
     if isinstance(dias, bool) or not isinstance(dias, int) or dias < 0:
-        raise ConfigInvalida("borrar_registros_dias tiene que ser un número entero de días (0: no borrar nunca)")
+        raise ConfigInvalida(f"{campo} tiene que ser un número entero de días (0: no borrar nunca)")
     return dias
+
+
+def dias_de_registro(datos):
+    return dias_de(datos, "borrar_registros_dias", BORRAR_REGISTROS_DIAS)
 
 
 def partir_sola_de(datos):
@@ -290,6 +295,7 @@ def armar(datos, base):
         "dormir_con_claude": dormir_con_claude_de(datos),
         "partir_sola": partir_sola_de(datos),
         "borrar_registros_dias": dias_de_registro(datos),
+        "borrar_respaldos_dias": dias_de(datos, "borrar_respaldos_dias", BORRAR_RESPALDOS_DIAS),
         "aprender": aprender_de(datos),
         "ordenar_con_preguntas": ordenar_con_preguntas_de(datos),
         "comparar_aprendido": comparar_aprendido_de(datos),

@@ -535,10 +535,17 @@ def destinos_de_enlaces(texto):
 
 
 def se_puede_mirar(carpeta, nombre):
-    if nucleo.es_de_red(nombre) or os.path.isabs(nombre) or re.match(r"^[A-Za-z]:", nombre):
+    if nucleo.es_de_red(nombre) or os.path.isabs(nombre) or ":" in nombre:
         return False
     completa = os.path.normpath(os.path.join(str(carpeta), nombre))
     return not nucleo.es_de_red(completa) and dentro(completa, str(carpeta))
+
+
+def roto_de_afuera(carpeta, nombre):
+    objetivo = os.path.normpath(os.path.join(str(carpeta), nombre))
+    if nucleo.es_de_red(nombre) or nucleo.es_de_red(objetivo) or not nucleo.dentro_de_fuentes(objetivo):
+        return True
+    return not os.path.isfile(objetivo)
 
 
 def enlaces_rotos(ruta_nota, texto, antes=""):
@@ -547,20 +554,24 @@ def enlaces_rotos(ruta_nota, texto, antes=""):
         return []
     ya = set(destinos_de_enlaces(antes or ""))
     carpeta = Path(ruta_nota).parent
-    dudosos = []
+    vistos, seguros, dudosos = [], set(), set()
     for destino in destinos_de_enlaces(texto or ""):
         limpio = urllib.parse.unquote(destino.split("#")[0].split("?")[0])
         nombre = limpio if limpio.lower().endswith(".md") else f"{limpio}.md"
-        if destino in ya or destino in dudosos:
+        if destino in ya or destino in vistos:
             continue
-        if not se_puede_mirar(carpeta, nombre) or not (carpeta / nombre).is_file():
-            dudosos.append(destino)
-    if not dudosos:
-        return []
-    cerebro = nucleo.desde_disco(con_entidades=False)
-    origen = cerebro.por_ruta.get(nucleo.normalizar(ruta_nota))
-    rotos = {x["destino"] for x in cerebro.rotos if x["de"] == origen and x["clase"] != "indice"}
-    return [d for d in dudosos if d in rotos]
+        vistos.append(destino)
+        if not se_puede_mirar(carpeta, nombre):
+            if roto_de_afuera(carpeta, nombre):
+                seguros.add(destino)
+        elif not (carpeta / nombre).is_file():
+            dudosos.add(destino)
+    rotos = set()
+    if dudosos:
+        cerebro = nucleo.desde_disco(con_entidades=False)
+        origen = cerebro.por_ruta.get(nucleo.normalizar(ruta_nota))
+        rotos = {x["destino"] for x in cerebro.rotos if x["de"] == origen and x["clase"] != "indice"}
+    return [d for d in vistos if d in seguros or (d in dudosos and d in rotos)]
 
 
 def regla_rutas(cerebro, rutas):

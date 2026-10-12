@@ -163,7 +163,8 @@ arreglarlo.
 - **Solo cambia una nota si lo aprobás:** el repaso de la noche propone arreglos y `--aplicar` cambia solo los que
   elijas. `--partir` (pasar lo viejo de una nota larga a otra nota) y `--renombrar` (cambiarle el nombre a una nota y
   a lo que la nombra en la memoria) muestran primero el plan y lo hacen recién con el código de ese plan
-  (`--confirmar`); antes copian las notas como estaban a `respaldos/`, dentro de la carpeta de datos. Fuera de eso,
+  (`--confirmar`); antes copian las notas como estaban a `respaldos/`, dentro de la carpeta de datos (esas copias no
+  se borran solas; con `borrar_respaldos_dias` en el `config.json` se borran las de más de esos días). Fuera de eso,
   Cerebrario no escribe en tus notas. La única excepción la prendés vos: con `partir_sola` en el `config.json`, la
   pasada que corrés a mano (`cerebrario --dormir` o `--partir-llenas`; nunca desde un hook) parte la memoria que está por llenarse: pasa sus entradas más viejas a una nota de historia
   o, si no tiene fechas, su segunda mitad a una nota «parte 2». Lo hace con la misma copia de antes y sin perder un

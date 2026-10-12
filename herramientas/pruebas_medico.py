@@ -77,28 +77,66 @@ def es_red(ruta):
     return texto.strip().replace("/", "\\").startswith("\\\\")
 
 
+ESPIAS = []
+PUROS_NT = ("_path_splitroot", "_path_splitroot_ex", "_path_normpath", "_path_abspath")
+
+
+def auditar(evento, argumentos):
+    if not ESPIAS or not (evento == "open" or evento.startswith("os.")) or not argumentos or not es_red(argumentos[0]):
+        return
+    ruta = os.fsdecode(argumentos[0])
+    ESPIAS[-1].append(ruta)
+    raise FileNotFoundError(errno.ENOENT, "prueba: acceso a red bloqueado", ruta)
+
+
+sys.addaudithook(auditar)
+
+
+def funciones_nt():
+    nt = sys.modules.get("nt")
+    if nt is None:
+        return []
+    blancos = []
+    for nombre in dir(nt):
+        if nombre.startswith("_path_") and nombre not in PUROS_NT:
+            real = getattr(nt, nombre)
+            blancos.append((nt, nombre))
+            blancos += [(os.path, a) for a in dir(os.path) if getattr(os.path, a) is real]
+    return blancos
+
+
 @contextlib.contextmanager
 def sin_red():
     tocadas = []
 
     def envolver(real):
-        def falso(ruta, *args, **kwargs):
+        def falso(*args, **kwargs):
+            ruta = args[0] if args else kwargs.get("path", "")
             if es_red(ruta):
-                tocadas.append(os.fspath(ruta))
-                raise FileNotFoundError(errno.ENOENT, "prueba: acceso a red bloqueado", os.fspath(ruta))
-            return real(ruta, *args, **kwargs)
+                tocadas.append(os.fsdecode(ruta))
+                raise FileNotFoundError(errno.ENOENT, "prueba: acceso a red bloqueado", os.fsdecode(ruta))
+            return real(*args, **kwargs)
         return falso
 
     blancos = [(os, "stat"), (os, "lstat"), (os, "open"), (os, "scandir"), (os, "listdir"), (os.path, "exists"),
-               (os.path, "isfile"), (os.path, "isdir"), (os.path, "lexists"), (builtins, "open"), (io, "open")]
+               (os.path, "isfile"), (os.path, "isdir"), (os.path, "lexists"), (os.path, "islink"), (builtins, "open"),
+               (io, "open")]
+    blancos += [(os.path, a) for a in ("_getfinalpathname",) if hasattr(os.path, a)]
+    blancos += funciones_nt()
     accesor = getattr(pathlib, "_NormalAccessor", None)
     if accesor is not None:
         blancos += [(accesor, a) for a in ("stat", "lstat", "open", "scandir", "listdir") if hasattr(accesor, a)]
     with contextlib.ExitStack() as pila:
-        for modulo, atributo in blancos:
+        for modulo, atributo in dict.fromkeys(blancos):
             falso = envolver(getattr(modulo, atributo))
             pila.enter_context(mock.patch.object(modulo, atributo, staticmethod(falso) if isinstance(modulo, type) else falso))
-        yield tocadas
+        pila.enter_context(mock.patch.object(medico.resolver_ruta, "__defaults__",
+                                             (envolver(medico.resolver_ruta.__defaults__[0]),)))
+        ESPIAS.append(tocadas)
+        try:
+            yield tocadas
+        finally:
+            ESPIAS.remove(tocadas)
 
 
 class Base(unittest.TestCase):
@@ -167,6 +205,78 @@ class PruebasM1(Base):
             reglas.carpeta_dicha({"_cuerpo": cuerpo}, "demo", [("demo", {"raiz": str(proyecto)})],
                                  {"demo": proyecto}, {})
         self.assertEqual(tocadas, [])
+
+
+class PruebasR6(Base):
+    preparar = PruebasM1.preparar
+
+    def test_R6_espia_ve_funciones_ligadas_antes_de_parchear(self):
+        listar, abrir, mirar = os.listdir, io.open, os.scandir
+        red = f"\\\\{SERVIDOR}\\share"
+        for accion in (lambda: listar(red), lambda: abrir(red + "\\a.md"), lambda: mirar(red)):
+            with sin_red() as tocadas:
+                with self.assertRaises(FileNotFoundError):
+                    accion()
+            self.assertEqual(len(tocadas), 1, tocadas)
+            self.assertTrue(es_red(tocadas[0]), tocadas)
+
+    def test_R6_espia_ve_el_existe_ligado_por_defecto_en_resolver_ruta(self):
+        with sin_red() as tocadas, mock.patch.object(medico.nucleo, "es_de_red", return_value=False), \
+                self.assertRaises(FileNotFoundError):
+            medico.resolver_ruta(f"\\\\{SERVIDOR}\\share\\x.md", [str(MEMORIA)])
+        self.assertTrue(tocadas and all(es_red(t) for t in tocadas), tocadas)
+
+    def test_R6_resolver_ruta_no_le_pregunta_a_existe_por_rutas_de_red(self):
+        preguntadas = []
+
+        def existe(ruta):
+            preguntadas.append(ruta)
+            return False
+
+        for texto in [r.strip("`") for r in RUTAS_DE_RED] + [f"//{SERVIDOR}/share/v.md", "notas/local.md"]:
+            medico.resolver_ruta(texto, [str(MEMORIA), str(CASA)], existe)
+        self.assertTrue(preguntadas, "el espía no vio ni la ruta local")
+        self.assertEqual([r for r in preguntadas if es_red(r)], [])
+        with mock.patch.object(medico.nucleo, "es_de_red", return_value=False):
+            medico.resolver_ruta(f"//{SERVIDOR}/share/v.md", [str(MEMORIA)], existe)
+        self.assertTrue([r for r in preguntadas if es_red(r)], "sin el arreglo, el espía tiene que ver la red")
+
+    def test_R6_espia_detecta_si_se_quita_el_arreglo_M1(self):
+        nota, texto = self.preparar()
+        with mock.patch.object(medico, "se_puede_mirar", return_value=True), sin_red() as tocadas:
+            try:
+                medico.enlaces_rotos(str(nota), texto)
+            except FileNotFoundError:
+                pass
+        self.assertTrue(tocadas, "sin el arreglo M1 el espía tiene que ver accesos a la red")
+        self.assertTrue(all(es_red(t) for t in tocadas), tocadas)
+
+
+class PruebasR7(Base):
+    preparar = PruebasM1.preparar
+
+    def test_R7_enlaces_absolutos_de_red_o_fuera_no_arman_el_cerebro(self):
+        nota, _ = self.preparar()
+        solo_fuera = "\n".join(ENLACES_DE_RED) + "\n"
+        with mock.patch.object(nucleo, "desde_disco", side_effect=AssertionError("armó el cerebro")), sin_red() as tocadas:
+            rotos = medico.enlaces_rotos(str(nota), solo_fuera)
+        self.assertEqual(tocadas, [])
+        self.assertEqual(rotos, medico.destinos_de_enlaces(solo_fuera))
+
+    def test_R7_enlace_absoluto_dentro_de_la_memoria_se_mira_sin_armar_el_cerebro(self):
+        nota, _ = self.preparar()
+        existe = (MEMORIA / "otra-ñandú.md").as_posix()
+        falta = (MEMORIA / "no-está.md").as_posix()
+        texto = f"[x](<{existe}>) y [y](<{falta}>)\n"
+        with mock.patch.object(nucleo, "desde_disco", side_effect=AssertionError("armó el cerebro")), sin_red() as tocadas:
+            rotos = medico.enlaces_rotos(str(nota), texto)
+        self.assertEqual(tocadas, [])
+        self.assertEqual(rotos, [falta])
+
+    def test_R7_lo_dudoso_de_la_carpeta_sigue_yendo_al_cerebro(self):
+        nota, _ = self.preparar()
+        rotos = medico.enlaces_rotos(str(nota), "[r](falta-acción.md) y [[otra-ñandú]] y [o](otra-ñandú.md)\n")
+        self.assertEqual(rotos, ["falta-acción.md"])
 
 
 class PruebasM2(Base):
@@ -408,7 +518,7 @@ class PruebasM14(Base):
         ajena.mkdir()
         (base / ordenar.REGISTRO).write_text("registro\n", encoding="utf-8")
         nota = escribir("señales.md", "texto\n")
-        with mock.patch.dict(nucleo.CONFIG, {"borrar_registros_dias": 90}):
+        with mock.patch.dict(nucleo.CONFIG, {"borrar_respaldos_dias": 90}):
             nueva = ordenar.respaldar(DATOS, [nota])
         self.assertFalse(viejo.exists())
         self.assertTrue(reciente.exists() and ajena.exists() and nueva.exists() and (base / ordenar.REGISTRO).exists())
@@ -416,9 +526,62 @@ class PruebasM14(Base):
     def test_M14_con_cero_dias_no_borra(self):
         viejo = DATOS / ordenar.RESPALDOS / "20200101-000000-partir"
         viejo.mkdir(parents=True)
-        with mock.patch.dict(nucleo.CONFIG, {"borrar_registros_dias": 0}):
+        with mock.patch.dict(nucleo.CONFIG, {"borrar_respaldos_dias": 0}):
             ordenar.respaldar(DATOS, [escribir("señales.md", "texto\n")])
         self.assertTrue(viejo.exists())
+
+
+class PruebasR8(Base):
+    def test_R8_de_fabrica_no_borra_respaldos_aunque_se_borren_registros(self):
+        viejo = DATOS / ordenar.RESPALDOS / "20200101-000000-partir"
+        viejo.mkdir(parents=True)
+        self.assertEqual(nucleo.CONFIG.get("borrar_respaldos_dias"), 0)
+        with mock.patch.dict(nucleo.CONFIG, {"borrar_registros_dias": 90}):
+            ordenar.respaldar(DATOS, [escribir("señales.md", "texto\n")])
+        self.assertTrue(viejo.exists())
+
+    def test_R8_borrar_respaldos_dias_es_opcion_propia_y_valida(self):
+        import configuracion
+        base = str(DATOS)
+        self.assertEqual(configuracion.armar({}, base)["borrar_respaldos_dias"], 0)
+        self.assertEqual(configuracion.armar({"borrar_respaldos_dias": 30}, base)["borrar_respaldos_dias"], 30)
+        for malo in (-1, "30", True, 1.5):
+            with self.assertRaises(configuracion.ConfigInvalida):
+                configuracion.armar({"borrar_respaldos_dias": malo}, base)
+
+    def test_R8_documentado_en_como_funciona_y_readme(self):
+        tabla = (CARPETA / "docs" / "como-funciona.md").read_text(encoding="utf-8")
+        self.assertIn("| `borrar_respaldos_dias` |", tabla)
+        leeme = (CARPETA / "README.md").read_text(encoding="utf-8")
+        self.assertIn("borrar_respaldos_dias", leeme)
+
+
+class PruebasR9(Base):
+    def test_R9_ningun_texto_dice_que_la_pasada_diaria_parte_sola(self):
+        import re
+        malos = re.compile(r"la pasada de cada día (?:hace|\(o|parte)|como hace sola la pasada|pasada de cada día si "
+                           r"«partir_sola»|vuelve a probar en media hora|daily pass\s+splits|tries again half an hour",
+                           re.I)
+        hallados = []
+        for nombre in ("ordenar.py", "cerebro.py", "dormir.py", "README.md", "README.en.md", "docs/como-funciona.md",
+                       "docs/ARQUITECTURA.md"):
+            texto = " ".join((CARPETA / nombre).read_text(encoding="utf-8").split())
+            texto = re.sub(r'"\s*"', "", texto)
+            hallados += [f"{nombre}: {m.group(0)}" for m in malos.finditer(texto)]
+        self.assertEqual(hallados, [])
+
+    def test_R9_por_partir_dice_que_se_hace_a_mano(self):
+        nota = escribir("llena.md", fm("llena", "Nota casi llena para probar lo que dice por-partir") +
+                        "".join(f"## Parte {k}\n\n" + "renglón de relleno con texto\n" * 40 for k in range(40)))
+        indice("llena.md")
+        salida = io.StringIO()
+        with contextlib.redirect_stdout(salida), mock.patch.dict(nucleo.CONFIG, {"partir_sola": None}):
+            ordenar.main_por_partir()
+        texto = salida.getvalue()
+        self.assertIn("llena.md", texto)
+        self.assertNotIn("pasada de cada día", texto)
+        self.assertIn("--dormir", texto)
+        self.assertTrue(nota.exists())
 
 
 def tearDownModule():

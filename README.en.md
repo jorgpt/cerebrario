@@ -160,13 +160,14 @@ writes to the memory on its own. When it finds a problem it tells Claude, and it
 - **It only changes a note if you approve it:** the nightly pass proposes fixes and `--aplicar` changes only the ones
   you pick. `--partir` (move the old part of a long note into another note) and `--renombrar` (rename a note and
   whatever names it in the memory) first show the plan and only do it with that plan's code (`--confirmar`); before
-  that they copy the notes as they were to `respaldos/`, inside the data folder. Other than that, Cerebrario doesn't
-  write to your notes. The one exception is something you turn on: with `partir_sola` in `config.json`, the daily pass
-  splits a memory that is about to fill up by itself: it moves its oldest entries into a history note or, if it has no
-  dates, its second half into a "part 2" note. It does so with the same backup and without losing a line, logs it in
-  `respaldos/partidas.log` and tells Claude about it. If the note was being edited, it tries again half an hour later
-  with a background process of the same Python (see [how it works](docs/como-funciona.md), in Spanish). It is off by
-  default.
+  that they copy the notes as they were to `respaldos/`, inside the data folder (those copies are not deleted on
+  their own; `borrar_respaldos_dias` in `config.json` deletes the ones older than that many days). Other than that,
+  Cerebrario doesn't write to your notes. The one exception is something you turn on: with `partir_sola` in `config.json`, the pass you
+  run by hand (`cerebrario --dormir` or `--partir-llenas`; never from a hook) splits a memory that is about to fill up:
+  it moves its oldest entries into a history note or, if it has no dates, its second half into a "part 2" note. It does
+  so with the same backup and without losing a line, logs it in `respaldos/partidas.log` and tells Claude about it. If
+  the note was being edited, it skips it and splits it the next time you run it (see
+  [how it works](docs/como-funciona.md), in Spanish). It is off by default.
 - **Rules and skills, only if you confirm them:** `--reglas` and `--recetas` suggest turning a memory into a
   path-scoped rule or a recipe into a skill, and are read-only. `--regla` and `--receta` show the text and, only with
   that text's code (`--confirmar`), write one file outside the memory: in the project's `.claude/rules/` or

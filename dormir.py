@@ -21,7 +21,6 @@ ESPERA_SUENO = 40 * 60
 ESPERA_CANDADO = 2.0
 OLVIDO = 180 * 24 * 3600
 VIGENCIA_PARTIDAS = 24 * 3600
-REINTENTO = 30 * 60
 REGLAS_MIRAR = ("anclaCorrida", "yaResuelto", "hecho")
 TONOS_MIRAR = ("peligro", "aviso", "revisar")
 ALREDEDOR = 60
@@ -69,13 +68,6 @@ def hace_falta(carpeta, ahora):
     if isinstance(hecha, (int, float)) and abs(ahora - hecha) < CADA:
         return False
     return marca_libre(carpeta, ahora)
-
-
-def falta_partir(carpeta, ahora):
-    datos = leer(carpeta)
-    mirada = datos.get("partir_mirada")
-    return (isinstance(mirada, (int, float)) and abs(ahora - mirada) >= REINTENTO
-            and any(s.get("espera") for s in datos.get("sin_partir") or []) and marca_libre(carpeta, ahora))
 
 
 def despertar(carpeta, programa, ahora=None):
@@ -342,7 +334,6 @@ def anotar_partidas(datos, comienzo, partidas, sin_partir):
     datos["sin_partir"] = list(sin_partir)
     datos["partidas_dichas"] = {s: t for s, t in (datos.get("partidas_dichas") or {}).items()
                                 if comienzo - t < VIGENCIA_PARTIDAS}
-    datos["partir_mirada"] = comienzo
     return datos
 
 

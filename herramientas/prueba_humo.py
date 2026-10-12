@@ -5089,9 +5089,9 @@ def revisar_partir_siempre(t):
            and "paso 40.0\n" in se_fue and "paso 2.3\n" in se_fue and "paso 1.0\n" in se_fue
            and all(f"paso 0.{k}\n" in quedo for k in range(4)) and "paso 2.0\n" not in quedo
            and len(quedo.encode()) < 30000, (salida[-600:], len(quedo)))
-    probar("la que se estaba editando no la toca todavía y dice que vuelve a probar en media hora, sin mandar a nadie a "
-           "partirla a mano; la que es un solo bloque sí queda para partir a mano, con el porqué",
-           "menos de 10 minutos; vuelve a probar en media hora" in del_renglon(salida, "sinfechas.md")
+    probar("la que se estaba editando no la toca todavía y dice que se parte la próxima vez que se corra, sin mandar a "
+           "nadie a partirla a mano; la que es un solo bloque sí queda para partir a mano, con el porqué",
+           "menos de 10 minutos; se parte la próxima vez que corras --partir-llenas" in del_renglon(salida, "sinfechas.md")
            and "A mano" not in del_renglon(salida, "sinfechas.md") and "un solo bloque" in del_renglon(salida, "bloque.md")
            and "A mano" in del_renglon(salida, "bloque.md") and not (memoria / "sinfechas-parte-2.md").exists(),
            salida[-600:])
@@ -5099,7 +5099,7 @@ def revisar_partir_siempre(t):
     falso = mundo / "armar.py"
     falso.write_text("import sys\nfrom pathlib import Path\nPath(__file__).with_name('lanzado.txt').write_text(sys.argv[1])\n",
                      encoding="utf-8")
-    antes_de_tiempo = dormir.falta_partir(str(mundo), ahora + 60) or dormir.despertar(str(mundo), str(falso), ahora + 60)
+    antes_de_tiempo = dormir.despertar(str(mundo), str(falso), ahora + 60)
     lanzo = dormir.despertar(str(mundo), str(falso), ahora + 1801)
     for _ in range(100):
         if (mundo / "lanzado.txt").exists():
@@ -5124,10 +5124,10 @@ def revisar_partir_siempre(t):
            and [k for k in range(12) if f"## Planta {k}\n" in quedo] == list(range(en_parte[0]))
            and not [r for r in todos if r not in renglones()] and len(agregados) < 12,
            (salida[-400:], len(quedo), en_parte, agregados))
-    probar("esa parte 2 nace como nota común (no archivo), queda en el índice y ya no hay nada esperando para reintentar",
+    probar("esa parte 2 nace como nota común (no archivo) y queda en el índice",
            nucleo.dato(cabeza, "description").startswith("Parte 2 de «Cuidados» (sigue de sinfechas): «Planta ")
-           and "](sinfechas-parte-2.md) — sigue de sinfechas: «Planta " in (memoria / "MEMORY.md").read_text(encoding="utf-8")
-           and not dormir.falta_partir(str(mundo), time.time() + 1801), cabeza)
+           and "](sinfechas-parte-2.md) — sigue de sinfechas: «Planta " in (memoria / "MEMORY.md").read_text(encoding="utf-8"),
+           cabeza)
     aviso = dormir.aviso_partidas(str(mundo), "chat0001") or ""
     registro = mundo / "respaldos" / "partidas.log"
     anotado = registro.read_text(encoding="utf-8").splitlines() if registro.exists() else []

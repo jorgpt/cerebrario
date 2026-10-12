@@ -2,7 +2,7 @@ import re
 import unicodedata
 
 RE_CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
-RE_INVISIBLES = re.compile(r"[\u00ad\u061c\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u206f\ufeff\ufff9-\ufffb]")
+RE_INVISIBLES = re.compile(r"[\u00ad\u061c\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u206f\ufeff\ufe00-\ufe0f\ufff9-\ufffb\U000e0000-\U000e007f\U000e0100-\U000e01ef]")
 RE_CORTES = re.compile(r"[\x00-\x1f\x7f-\x9f\u2028\u2029]")
 ETIQUETAS = str.maketrans({"<": "‹", ">": "›"})
 

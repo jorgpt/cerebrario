@@ -15,6 +15,7 @@ sys.path.insert(0, CARPETA)
 import hooks_comun
 from archivos import dentro, leer_objeto_json
 from hooks_comun import contexto_automatico as prendido, ya_cargadas
+from textos import limpiar
 
 MINIMO_TERMINOS = 3
 JUNTAS_MINIMAS = 3
@@ -337,7 +338,7 @@ def armar(resultado, cargadas=frozenset(), tope=TOPE):
     tramos = [(os.path.normcase(p["ruta"]), p.get("linea", 0), p.get("fin", 0)) for p in nuevas]
     elegidas = [d for d in resultado.get("decisiones", ()) if nueva(d["ruta"]) and not any(
         r == os.path.normcase(d["ruta"]) and desde <= d["linea"] and d["fin"] <= hasta for r, desde, hasta in tramos)]
-    carpeta = carpeta_repetida([p["ruta"] for p in nuevas] + [d["ruta"] for d in elegidas])
+    carpeta = limpiar(carpeta_repetida([p["ruta"] for p in nuevas] + [d["ruta"] for d in elegidas]))
 
     def lugar(p):
         return acortar(buscador.lugar_de_lectura(p), carpeta)

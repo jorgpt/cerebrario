@@ -1525,11 +1525,11 @@ def lugar_de_lectura(p):
 
 def donde_comprobar(c):
     if c.get("abrir"):
-        return c["abrir"]
+        return limpiar(c["abrir"])
     if not c.get("ubicacion"):
-        return c["archivo"]
+        return limpiar(c["archivo"])
     _, dos_puntos, lineas = c["archivo"].partition(":")
-    return f'{c["ubicacion"]}:{lineas}' if dos_puntos and lineas else c["ubicacion"]
+    return limpiar(f'{c["ubicacion"]}:{lineas}' if dos_puntos and lineas else c["ubicacion"])
 
 
 def con_funcion(c):
@@ -1540,8 +1540,8 @@ def lineas_comprobar(comprobar, detalle=True):
     if not detalle:
         return [f'  {donde_comprobar(c)} {APRENDIDO_CORTO}' if c.get("abrir") else f"  {con_funcion(c)}"
                 for c in comprobar]
-    return [f'  {donde_comprobar(c)}  ({APRENDIDO_LARGO} {c["ruta"]})' if c.get("abrir")
-            else f'  {con_funcion(c)}  ({c["ruta"]}:{c["linea"]})' for c in comprobar]
+    return [f'  {donde_comprobar(c)}  ({APRENDIDO_LARGO} {limpiar(c["ruta"])})' if c.get("abrir")
+            else f'  {con_funcion(c)}  ({limpiar(c["ruta"])}:{c["linea"]})' for c in comprobar]
 
 
 def partes_del_aviso(texto):

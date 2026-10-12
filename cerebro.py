@@ -1518,8 +1518,9 @@ def armar_parser(epilogo):
                         help="con --partir: lo que dice de la nota nueva el renglón del índice (si no, el principio de la "
                              "description)")
     modo.add_argument("--por-partir", action="store_true",
-                      help="lista las memorias que están por pasar el tope de una lectura y qué pasaría a otra nota la "
-                           "pasada de cada día si «partir_sola» está prendido, y lo último que partió; no cambia nada")
+                      help="lista las memorias que están por pasar el tope de una lectura y qué pasaría a otra nota "
+                           "con --partir-llenas o --dormir si «partir_sola» está prendido, y lo último que partió; no "
+                           "cambia nada")
     modo.add_argument("--pendientes", nargs="?", const="", metavar="PROYECTO",
                       help="junta lo que las memorias dicen que falta: sin probar, sin decidir, sin commit o por hacer, con "
                            "su nota, su renglón y su fecha; sola muestra lo del proyecto de la carpeta donde estás, con un "
@@ -1541,7 +1542,8 @@ def armar_parser(epilogo):
                            "en .claude/skills/ del proyecto (o en la carpeta personal si la nota no es de ninguno)")
     modo.add_argument("--partir-llenas", action="store_true",
                       help="con «partir_sola» prendido, parte ahora las memorias que están por pasar el tope de una "
-                           "lectura, como hace sola la pasada de cada día: deja copia, lo anota en el registro y avisa")
+                           "lectura (solo a mano, como --dormir; ningún hook parte notas): deja copia, lo anota en el "
+                           "registro y avisa")
     modo.add_argument("--renombrar", nargs=2, metavar=("NOTA", "NUEVO"),
                       help="muestra el plan para cambiarle el nombre a una nota: su archivo, el name de su encabezado y "
                            "cada enlace, nombre de archivo o mención que apunta a ella en la memoria y en el índice; "

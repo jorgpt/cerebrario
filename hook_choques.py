@@ -7,6 +7,7 @@ from collections import Counter
 CARPETA = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, CARPETA)
 import hooks_comun
+from textos import limpiar
 
 TOPE_LECTURA = 2 * 1024 * 1024
 TOPE_CHAT = 8 * 1024 * 1024
@@ -86,8 +87,8 @@ def aviso(datos, ahora=None):
         return None
     partes = [choques.quien({"s": e["actor"][0], "a": e["actor"][1], "tipo": e["tipo"], "c": e["c"]}) + " hace "
               + minutos(max(0, ahora - e["t"])) for e in sorted(ultimos.values(), key=lambda e: -e["t"])]
-    return ("Cerebrario: " + choques.nombre_archivo(ruta) + " también lo editó " + " y ".join(partes)
-            + ". Si trabajan a la vez, releé el archivo antes de seguir y fijate que los cambios no se pisen.")
+    return limpiar("Cerebrario: " + choques.nombre_archivo(ruta) + " también lo editó " + " y ".join(partes)
+                   + ". Si trabajan a la vez, releé el archivo antes de seguir y fijate que los cambios no se pisen.")
 
 
 def texto_nuevo(herramienta, entrada):
@@ -134,7 +135,8 @@ def aviso_rutas(datos):
                         "mismo renglón para que el médico no la marque.")
     if enlaces:
         consejos.append("El enlace corregilo o sacalo: el médico lo marca aunque el renglón lo explique.")
-    return f'Cerebrario: en {choques.nombre_archivo(ruta)} acabás de escribir {" y ".join(partes)}. ' + " ".join(consejos)
+    return limpiar(f'Cerebrario: en {choques.nombre_archivo(ruta)} acabás de escribir {" y ".join(partes)}. '
+                   + " ".join(consejos))
 
 
 def lista(cosas):
@@ -235,9 +237,9 @@ def aviso_dato_viejo(datos):
         return None
     import choques
     lugares = "; ".join(f"{r}:{linea} («{f}»)" for r, linea, f in hallados[:TOPE_HALLADOS])
-    return (f"Cerebrario: en {choques.nombre_archivo(ruta)} acabás de cambiar un dato que otras notas todavía dicen igual "
-            f"que antes: {lugares}. Si es el mismo dato, actualizalo ahí también; si esas cuentan otra cosa (o lo de antes "
-            "sigue siendo cierto allá), no hace falta tocarlas.")
+    return limpiar(f"Cerebrario: en {choques.nombre_archivo(ruta)} acabás de cambiar un dato que otras notas todavía "
+                   f"dicen igual que antes: {lugares}. Si es el mismo dato, actualizalo ahí también; si esas cuentan otra "
+                   "cosa (o lo de antes sigue siendo cierto allá), no hace falta tocarlas.")
 
 
 def recordados(eventos, desde):
@@ -290,9 +292,9 @@ def aviso_nota(datos):
             return None
         hook_evento.escribir_evento(hook_evento.recuerdo(sesion, cwd, ruta, [nota]))
         import choques
-        return (f"Cerebrario: cuando se edita {choques.nombre_archivo(ruta)} se suele leer también {nota} (lo aprendió "
-                "del uso) y en esta charla todavía no la leíste. Si el cambio toca lo que cuenta esa nota, leela antes "
-                "de seguir: puede tener una decisión o una trampa de este archivo.")
+        return limpiar(f"Cerebrario: cuando se edita {choques.nombre_archivo(ruta)} se suele leer también {nota} (lo "
+                       "aprendió del uso) y en esta charla todavía no la leíste. Si el cambio toca lo que cuenta esa nota, "
+                       "leela antes de seguir: puede tener una decisión o una trampa de este archivo.")
     return None
 
 

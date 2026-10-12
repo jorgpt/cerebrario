@@ -17,7 +17,7 @@ import cerebro as nucleo
 import configuracion
 import permisos
 from archivos import es_sensible, escribir_atomico, hay_candados, leer_objeto_json, soltar_candado, tomar_candado
-from textos import cantidad
+from textos import cantidad, limpiar
 
 CARPETA = Path(nucleo.DATOS) / "historial"
 ESTADO = CARPETA / "estado.json"
@@ -41,6 +41,15 @@ NOMBRES_CAMBIO = {"M": ("cambiada", "cambiadas"), "A": ("nueva", "nuevas"), "D":
 RE_HORA = r"(?:[ T,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?\Z"
 RE_FECHA_ISO = re.compile(r"(\d{4})-(\d{1,2})-(\d{1,2})" + RE_HORA)
 RE_FECHA_DIA = re.compile(r"(\d{1,2})/(\d{1,2})(?:/(\d{2}|\d{4}))?" + RE_HORA)
+CLAVES_SEGURAS = [(tipo, re.compile(patron)) for tipo, patron in (
+    ("llave privada", r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+    ("clave de Anthropic u OpenAI (sk-)", r"(?<![\w-])sk-(?:[A-Za-z0-9]+-)?(?=[A-Za-z0-9_-]*\d)[A-Za-z0-9_-]{20,}"),
+    ("token de GitHub", r"(?<![\w-])(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})"),
+    ("llave de AWS", r"(?<![\w-])AKIA[0-9A-Z]{16}(?![\w-])"),
+    ("token de Slack", r"(?<![\w-])xox[abprs]-[A-Za-z0-9-]{10,}"),
+    ("clave de Stripe", r"(?<![\w-])(?:sk|rk)_live_[A-Za-z0-9]{16,}"),
+    ("token JWT", r"(?<![\w-])eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}"),
+)]
 
 
 def carpetas():
@@ -127,22 +136,47 @@ def resumen(cambios):
     return "; ".join(partes) or "sin cambios"
 
 
+def clave_en(texto):
+    for numero, renglon in enumerate(texto.splitlines(), 1):
+        for tipo, patron in CLAVES_SEGURAS:
+            if patron.search(renglon):
+                return {"tipo": tipo, "renglon": numero}
+    return {}
+
+
 def con_clave(carpeta, relativa):
-    import charlas
     contenido = git(carpeta, "show", f":{relativa}", binario=True)
-    texto = contenido.decode("utf-8", "replace") if contenido is not None else ""
-    return any(patron.search(texto) for patron in charlas.CLAVES)
+    if contenido is None:
+        return None
+    return clave_en(contenido.decode("utf-8", "replace"))
 
 
 def retener(carpeta, cambios):
-    con_claves = [ruta for estado, ruta in cambios if estado != "D" and con_clave(carpeta, ruta)]
+    halladas = []
+    for estado, ruta in cambios:
+        if estado == "D":
+            continue
+        hallada = con_clave(carpeta, ruta)
+        if hallada is None:
+            return None
+        if hallada:
+            halladas.append(dict(hallada, ruta=ruta))
+    con_claves = [h["ruta"] for h in halladas]
     nuevas = [ruta for estado, ruta in cambios if estado == "A" and ruta in con_claves]
     viejas = [ruta for ruta in con_claves if ruta not in nuevas]
     if nuevas and git(carpeta, "rm", "--cached", "-q", "--", *nuevas) is None:
         return None
     if viejas and git(carpeta, "reset", "-q", "--", *viejas) is None:
         return None
-    return con_claves
+    return halladas
+
+
+def cambios_del_indice(carpeta):
+    salida = git(carpeta, "diff", "--cached", "--name-status", "--no-renames", "-z")
+    if salida is None:
+        return None
+    partes = salida.split("\0")
+    return [(partes[i], partes[i + 1]) for i in range(0, len(partes) - 1, 2) if partes[i] and partes[i + 1]]
 
 
 def guardar_carpeta(carpeta, retenidas=None):
@@ -156,19 +190,19 @@ def guardar_carpeta(carpeta, retenidas=None):
         (repo / "info" / "exclude").write_text(EXCLUIR, encoding="utf-8")
     if not candado_libre(repo) or git(carpeta, "add", "-A", ".") is None:
         return False
-    seguidas = (git(carpeta, "ls-files") or "").splitlines()
+    seguidas = [r for r in (git(carpeta, "ls-files", "-z") or "").split("\0") if r]
     sacar = [r for r in seguidas if fuera_del_historial(carpeta, r)]
     if sacar and git(carpeta, "rm", "--cached", "-q", "--", *sacar) is None:
         return False
-    salida = git(carpeta, "diff", "--cached", "--name-status", "--no-renames")
-    if salida is None:
+    cambios = cambios_del_indice(carpeta)
+    if cambios is None:
         return False
-    cambios = [tuple(linea.split("\t", 1)) for linea in salida.splitlines() if "\t" in linea]
-    con_claves = retener(carpeta, cambios)
-    if con_claves is None:
+    halladas = retener(carpeta, cambios)
+    if halladas is None:
         return False
     if retenidas is not None:
-        retenidas.extend(con_claves)
+        retenidas.extend(halladas)
+    con_claves = {h["ruta"] for h in halladas}
     cambios = [(estado, ruta) for estado, ruta in cambios if ruta not in con_claves]
     if not cambios:
         return True
@@ -179,6 +213,17 @@ def guardar_carpeta(carpeta, retenidas=None):
 def guardar(presupuesto=None, espera=None):
     if not hay_git():
         return False
+    permisos.crear(CARPETA)
+    candado = tomar_candado(str(CARPETA / CANDADO_FONDO))
+    if candado is None and hay_candados():
+        return False
+    try:
+        return guardar_sin_candado(presupuesto, espera)
+    finally:
+        soltar_candado(candado)
+
+
+def guardar_sin_candado(presupuesto, espera):
     estado = leer_objeto_json(ESTADO)
     cambio = False
     _limite[0] = time.monotonic() + (PRESUPUESTO if presupuesto is None else presupuesto)
@@ -193,7 +238,7 @@ def guardar(presupuesto=None, espera=None):
             if guardar_carpeta(carpeta, retenidas):
                 estado[clave] = actual
                 estado["retenidas"] = con_retenidas(estado.get("retenidas"), clave,
-                                                    [os.path.join(carpeta, r) for r in retenidas])
+                                                    [dict(r, ruta=os.path.join(carpeta, r["ruta"])) for r in retenidas])
                 cambio = True
     finally:
         _limite[0] = None
@@ -208,29 +253,29 @@ def con_retenidas(previas, clave, rutas):
     return dict(otras, **({clave: rutas} if rutas else {}))
 
 
+def retenida(r):
+    if not isinstance(r, dict):
+        return limpiar(os.path.basename(str(r)))
+    nombre = limpiar(os.path.basename(str(r.get("ruta", ""))))
+    return f'{nombre} (renglón {r.get("renglon", "?")}: {limpiar(r.get("tipo", "clave"))})'
+
+
 def aviso_retenidas():
     previas = leer_objeto_json(ESTADO).get("retenidas")
     rutas = [r for lista in (previas if isinstance(previas, dict) else {}).values() if isinstance(lista, list)
              for r in lista]
     if not rutas:
         return ""
-    nombres = ", ".join(os.path.basename(str(r)) for r in rutas[:MOSTRAR_RETENIDAS])
+    nombres = ", ".join(retenida(r) for r in rutas[:MOSTRAR_RETENIDAS])
     resto = f" y {len(rutas) - MOSTRAR_RETENIDAS} más" if len(rutas) > MOSTRAR_RETENIDAS else ""
     return (f" AVISO: no guardé la última versión de {cantidad(len(rutas), 'nota', 'notas')} ({nombres}{resto}) porque "
-            "parecen tener una clave o un secreto. Sacalo de la nota (va en un gestor de claves o en una variable de "
+            "tienen algo con forma de clave o secreto. Sacalo de la nota (va en un gestor de claves o en una variable de "
             "entorno) y se guarda sola la próxima vez.")
 
 
 def main_guardar():
     try:
-        permisos.crear(CARPETA)
-        candado = tomar_candado(str(CARPETA / CANDADO_FONDO))
-        if candado is None and hay_candados():
-            return 0
-        try:
-            guardar(PRESUPUESTO_FONDO, ESPERA_FONDO)
-        finally:
-            soltar_candado(candado)
+        guardar(PRESUPUESTO_FONDO, ESPERA_FONDO)
     except Exception:
         import hooks_comun
         hooks_comun.fallo()

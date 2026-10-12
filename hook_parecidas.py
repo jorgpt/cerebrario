@@ -33,7 +33,7 @@ def aviso(datos):
     if not texto or not texto.strip():
         return None
     import parecidas
-    from textos import decimal
+    from textos import decimal, limpiar
     otras = [d for d in parecidas.documentos_de_memoria(nucleo.desde_disco()) if real(d["ruta"]) != propia]
     resultado = parecidas.comparar(texto.replace("\r\n", "\n"), otras, CUANTAS)
     lista = [r for r in resultado["resultados"] if r["puntaje"] >= UMBRAL]
@@ -45,8 +45,8 @@ def aviso(datos):
         detalle = f"; comparten: {comparten}" if comparten else ""
         partes.append(f'{os.path.basename(r["ruta"])} ({decimal(r["puntaje"], 2)}{detalle})')
     nueva = os.path.basename(ruta)
-    return (f'Cerebrario: la memoria nueva {nueva} se parece a {" y a ".join(partes)}. '
-            "Revisá si es lo mismo: si lo es, sumalo a la que ya existe en vez de tener dos.")
+    return limpiar(f'Cerebrario: la memoria nueva {nueva} se parece a {" y a ".join(partes)}. '
+                   "Revisá si es lo mismo: si lo es, sumalo a la que ya existe en vez de tener dos.")
 
 
 def main():

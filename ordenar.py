@@ -509,7 +509,7 @@ def respaldar(datos, rutas, ahora=None, que="partir"):
 
 def podar_respaldos(base, nueva, ahora=None):
     import cerebro as nucleo
-    dias = nucleo.CONFIG.get("borrar_registros_dias")
+    dias = nucleo.CONFIG.get("borrar_respaldos_dias")
     if not dias:
         return
     limite = time.strftime("%Y%m%d-%H%M%S", time.localtime((time.time() if ahora is None else ahora) - dias * 86400))
@@ -1300,7 +1300,8 @@ def partir_solas(cerebro, datos, opciones, ahora=None, simular=False):
             continue
         if not simular and 0 <= reposo < QUIETA:
             saltadas.append(dict(base, espera=True,
-                                 motivo="se guardó hace menos de 10 minutos; vuelve a probar en media hora"))
+                                 motivo="se guardó hace menos de 10 minutos; se parte la próxima vez que corras "
+                                        "--partir-llenas o --dormir"))
             continue
         plan, dicho, error = plan_sola(cerebro, nodo, lleno, opciones, hoy)
         if error:
@@ -1362,9 +1363,10 @@ def main_por_partir():
         print(f'{Path(s["nota"]).name} está al {s["lleno"]} %, pero {s["motivo"]}. Se puede partir a mano: '
               f'{configuracion.comando()} --partir "{Path(s["nota"]).name}"')
     if hechas:
-        print("Con «partir_sola» prendido en el config.json, la pasada de cada día hace esos cambios y lo avisa."
-              if not opciones else "«partir_sola» está prendido: la pasada de cada día hace esos cambios y lo avisa "
-              f"({configuracion.comando()} --partir-llenas los hace ahora).")
+        print(f"Con «partir_sola» prendido en el config.json, {configuracion.comando()} --partir-llenas (o --dormir), "
+              "corrido a mano, hace esos cambios y lo avisa; ningún hook parte notas." if not opciones
+              else f"«partir_sola» está prendido: {configuracion.comando()} --partir-llenas (o --dormir), corrido a mano, "
+              "hace esos cambios y lo avisa; ningún hook parte notas.")
     ultimas = ultimas_partidas(nucleo.DATOS)
     if ultimas:
         print(f"Lo último que partió sola (el registro entero está en {Path(nucleo.DATOS) / RESPALDOS / REGISTRO}):")
